@@ -1,0 +1,8 @@
+/cache
+/vendor
+/.idea
+/.phalcon
+/app/logs
+composer.lock
+.DS_Store
+.env

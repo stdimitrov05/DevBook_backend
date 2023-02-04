@@ -1,0 +1,13 @@
+.git
+.idea
+.phalcon
+.gitignore
+**/.DS_Store
+.next
+.dockerignore
+Dockerfile
+node_modules
+vendor
+ssl
+cache
+logs

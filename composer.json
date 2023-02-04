@@ -1,0 +1,7 @@
+{
+    "require": {
+        "firebase/php-jwt": "^5.0",
+        "monolog/monolog": "^1.23",
+        "intervention/image": "^2.7"
+    }
+}
