@@ -67,8 +67,8 @@ class AuthController extends AbstractController
 
         } catch (ServiceException $e) {
             switch ($e->getCode()) {
-                case AbstractService::ERROR_UNABLE_CREATE_USER:
                 case AbstractService::ERROR_FORMAT_IS_NOT_SUPPORT:
+                case AbstractService::ERROR_UNABLE_CREATE_AVATAR:
                     throw new Http422Exception($e->getMessage(), $e->getCode(), $e);
                 default:
                     throw new Http500Exception('Internal Server Error', $e->getCode(), $e);

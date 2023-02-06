@@ -39,6 +39,7 @@ class Avatars extends \Phalcon\Mvc\Model
      */
     public $size;
 
+
     /**
      *
      * @var integer

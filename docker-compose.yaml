@@ -28,7 +28,7 @@ services:
     volumes:
       - ./app:/var/www/php/app
       - ./public:/var/www/php/public
-      - ./image:/var/www/php/files
+      - ./app/images:/var/www/php/files
       - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./composer.json:/var/www/php/composer.json
       - composer_data:/var/www/php/vendor

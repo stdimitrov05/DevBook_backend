@@ -7,6 +7,7 @@ use App\Models\Avatars;
 use App\Models\EmailConfirmations;
 use App\Models\Users;
 use App\Exceptions\ServiceException;
+use  Intervention\Image\ImageManager;
 
 /**
  * Business-logic for users
@@ -51,7 +52,7 @@ class UsersService extends AbstractService
 //            if ($userAgent) $emailConfirmation->user_agent = $userAgent;
 //            $emailConfirmation->save();
 //
-         $this->db->commit();
+            $this->db->commit();
 
         } catch (\PDOException $e) {
             $this->db->rollback();
@@ -72,33 +73,48 @@ class UsersService extends AbstractService
      */
     public function uploadedImage(array $data)
     {
-        $imageArr = [];
+        $data['file']['name'] = time();
         $supportTypes = [
-         "image/png",
-         "image/jpg",
-         "image/gif",
+            "image/png",
+            "image/jpg",
+            "image/jpeg",
+            "image/gif",
         ];
+        $imageType = '';
+        switch ($data['file']['type']) {
 
-        foreach ($data as $item) {
-            $imageArr['name'] = $data['file']['name'];
-            $imageArr['type'] = $data['file']['type'];
-            $imageArr['size'] = $data['file']['size'];
-        }
-        if (!in_array($imageArr['type'],$supportTypes))
-        {
-            throw  new ServiceException(
-                "This format is not supported",
-                self::ERROR_FORMAT_IS_NOT_SUPPORT
-            );
-        }
+            case  "image/png" :
+                $imageType = "png";
+                break;
+
+            case  "image/jpg" :
+                $imageType = "jpg";
+                break;
+
+            case  "image/jpeg" :
+                $imageType = "jpeg";
+                break;
+
+            case  "image/gif" :
+                $imageType = "gif";
+                break;
+
+            default :
+                if (in_array($data['file']['type'], $supportTypes) === false) {
+                    throw  new ServiceException(
+                        "This format is not supported",
+                        self::ERROR_FORMAT_IS_NOT_SUPPORT
+                    );
+                }
+                break;
+        };
 
 
         try {
             $this->db->begin();
             $avatar = new Avatars();
-            $avatar->assign($imageArr);
+            $avatar->assign($data['file']);
             $result = $avatar->create();
-
             if (!$result) {
                 throw new ServiceException(
                     'Unable to create user',
@@ -106,19 +122,28 @@ class UsersService extends AbstractService
                 );
             }
 
-//
-//            $ipAddress = $this->request->getClientAddress();
-//            $userAgent = $this->request->getUserAgent();
-//            $token = Helper::generateToken();
+            $uploadFolder = '/var/www/php/files/' . $data['file']['name'] . "." . $imageType;
+            $uploaded = move_uploaded_file($data['file']['tmp_name'], $uploadFolder);
 
-//            // Send email with confirmation link
-//            $emailConfirmation = new EmailConfirmations();
-//            $emailConfirmation->user_id = $user->id;
-//            $emailConfirmation->token = $token;
-//            if ($ipAddress) $emailConfirmation->ip_address = $ipAddress;
-//            if ($userAgent) $emailConfirmation->user_agent = $userAgent;
-//            $emailConfirmation->save();
-//
+            if ($uploaded === false ) {
+                throw  new ServiceException(
+                    "Unable to upload image",
+                    self::ERROR_UNABLE_TO_UPLOAD_IMAGE
+                );
+            }
+
+            $manager =  new ImageManager(['driver' => 'imagick']);
+            $image = $manager->make($uploadFolder);
+            $image->resize(320,240);
+
+            // Remove origin image
+            $isRemoveImage = unlink($uploadFolder);
+
+            if ( $isRemoveImage === true) {
+                $image->save($uploadFolder);
+            }
+
+
             $this->db->commit();
 
         } catch (\PDOException $e) {
@@ -127,7 +152,8 @@ class UsersService extends AbstractService
         }
 
         return [
-            'avatarId' => $avatar->id
+            'avatarId' => $avatar->id,
+
         ];
 
     }
