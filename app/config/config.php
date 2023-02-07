@@ -18,7 +18,7 @@ return new \Phalcon\Config(
             'emailsDir' => APP_PATH . '/views/emails/',
             'logsDir' => APP_PATH . '/logs/',
             'baseUri' => "/",
-            'images' => APP_PATH."/images",
+            'imagesDir' => APP_PATH . "/images/",
             'domain' => getenv('DOMAIN')
         ],
         'mail' => [

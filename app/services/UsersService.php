@@ -144,6 +144,7 @@ class UsersService extends AbstractService
             }
 
 
+
             $this->db->commit();
 
         } catch (\PDOException $e) {
@@ -153,7 +154,6 @@ class UsersService extends AbstractService
 
         return [
             'avatarId' => $avatar->id,
-
         ];
 
     }
