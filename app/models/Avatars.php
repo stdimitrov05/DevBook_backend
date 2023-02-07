@@ -17,6 +17,7 @@ class Avatars extends \Phalcon\Mvc\Model
      */
     public $id;
 
+    public $user_id;
 
     /**
      *
@@ -53,6 +54,9 @@ class Avatars extends \Phalcon\Mvc\Model
     public function initialize()
     {
         $this->setSource('avatars');
+        $this->belongsTo('user_id', '\App\Models\Users', 'id', [
+            'alias' => 'user'
+        ]);
     }
 
     public function beforeValidationOnCreate()

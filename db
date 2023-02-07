@@ -1,0 +1,342 @@
+-- phpMyAdmin SQL Dump
+-- version 5.1.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: mysql
+-- Generation Time: Feb 07, 2023 at 09:04 PM
+-- Server version: 8.0.31
+-- PHP Version: 7.4.15
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `devbook`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `avatars`
+--
+
+CREATE TABLE `avatars` (
+  `id` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED DEFAULT NULL,
+  `name` varchar(25) DEFAULT NULL,
+  `type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `size` int DEFAULT NULL,
+  `created_at` int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `avatars`
+--
+
+INSERT INTO `avatars` (`id`, `user_id`, `name`, `type`, `size`, `created_at`) VALUES
+(1, 30, '1675803854.png', 'image/png', 149886, 1675803854);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `email_confirmations`
+--
+
+CREATE TABLE `email_confirmations` (
+  `id` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED NOT NULL,
+  `token` char(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `user_agent` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `confirmed` tinyint UNSIGNED NOT NULL DEFAULT '0',
+  `created_at` int UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `email_confirmations`
+--
+
+INSERT INTO `email_confirmations` (`id`, `user_id`, `token`, `ip_address`, `user_agent`, `confirmed`, `created_at`) VALUES
+(56, 56, '8bae16d3019f9ae690383130d476d892', NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1, 1675110162);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `failed_logins`
+--
+
+CREATE TABLE `failed_logins` (
+  `id` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED DEFAULT NULL,
+  `ip_address` varchar(39) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `user_agent` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
+  `attempted` int UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `failed_logins`
+--
+
+INSERT INTO `failed_logins` (`id`, `user_id`, `ip_address`, `user_agent`, `attempted`) VALUES
+(11, 12, NULL, 'PostmanRuntime/7.29.2', 1665812876),
+(12, 12, NULL, 'PostmanRuntime/7.29.2', 1665813175),
+(13, 0, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0', 1673276776),
+(14, 0, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0', 1673276780),
+(15, NULL, NULL, '', 1673548550),
+(16, NULL, NULL, '', 1673557778),
+(17, NULL, NULL, '', 1673557779),
+(18, NULL, NULL, '', 1673605982),
+(19, NULL, NULL, '', 1673697677),
+(20, NULL, NULL, '', 1674031038),
+(21, NULL, NULL, '', 1674031038),
+(22, NULL, NULL, '', 1674031045),
+(23, NULL, NULL, '', 1674031045),
+(24, NULL, NULL, '', 1674031045),
+(25, NULL, NULL, '', 1674031046),
+(26, NULL, NULL, '', 1674064860),
+(27, NULL, NULL, '', 1674065183),
+(28, NULL, NULL, '', 1674065409),
+(29, NULL, NULL, '', 1674065462),
+(30, NULL, NULL, '', 1674065471),
+(31, NULL, NULL, '', 1674065474),
+(32, NULL, NULL, '', 1674065636),
+(33, NULL, NULL, '', 1674068662),
+(34, NULL, NULL, '', 1674068662),
+(35, NULL, NULL, '', 1674068662),
+(36, NULL, NULL, '', 1674068663),
+(37, NULL, NULL, '', 1674068666),
+(38, NULL, NULL, '', 1674068667),
+(39, NULL, NULL, '', 1674069038),
+(40, NULL, NULL, '', 1674069039),
+(41, NULL, NULL, '', 1674069039),
+(42, NULL, NULL, '', 1674069039),
+(43, NULL, NULL, '', 1674069040),
+(44, NULL, NULL, '', 1674069042),
+(45, NULL, NULL, '', 1674107305),
+(46, NULL, NULL, '', 1675107213),
+(47, NULL, NULL, '', 1675107234),
+(48, NULL, NULL, '', 1675107892),
+(49, NULL, NULL, '', 1675108050);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `logins_history`
+--
+
+CREATE TABLE `logins_history` (
+  `id` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED DEFAULT NULL,
+  `jti` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '' COMMENT 'ID of refresh token',
+  `fcm_token` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `user_agent` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `expire_at` int UNSIGNED NOT NULL,
+  `created_at` int UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `logins_history`
+--
+
+INSERT INTO `logins_history` (`id`, `user_id`, `jti`, `fcm_token`, `ip_address`, `user_agent`, `expire_at`, `created_at`) VALUES
+(115, 56, 'v6LzIdzr7cYBIMvLGsj0yvEW0Ege0Oo1P4N5BCS/yUM=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702564, 1675110564),
+(116, 56, 'p0bbGmsvph1KRVJ+UqD0KVTIS8s3WTuPAYbFOC+Q91c=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702564, 1675110564),
+(117, 56, 'PtSeIzYfE7W4RcGobxaoUzRKkKfAKmsJFirceoqDWt4=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702642, 1675110642),
+(118, 56, 'ChevpKeJat5SginPKgH6zqmNsQcDxpIpIAowPrT1dF0=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702642, 1675110642),
+(119, 56, 'ky7ekPVLTAc65CElY8iRAAG4zcQprRIQ1S68nQMuThE=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702854, 1675110854),
+(120, 56, 'kE84040R9f5PYjIfbNZ42mUmuRrm5CzOF0Yu0oTDZ2k=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702854, 1675110854),
+(121, 56, 'O1MQMHuVzrFzQty7lJKJAy/4Oa6NZQf2ChFyuCfija0=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702931, 1675110931),
+(122, 56, 'bMPec3fEecAXC+DkmeNPlp8b1C5s6HX4pUIj3oz08YU=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677702931, 1675110931),
+(123, 56, 'ws5MfnxeWKJ9n3qRnjHGeH/1knSwre4nDOjXlokA538=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703029, 1675111029),
+(124, 56, 'djSXip73Wa9XOHtgRVf55mVeaJDR7zzMz+zMtCiCePM=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703029, 1675111029),
+(125, 56, 'AM+PUqfewuHE+Wq4Vq5zLIQstWrmn5+tp9As7a/K3FU=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703059, 1675111059),
+(126, 56, 'S0LAnqVKpaMn8lrYwx10hezLbjbxQWGwmiBl23YJt8Q=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703059, 1675111059),
+(127, 56, 'PQMtMCR0e1REawDgbsFv9At0+w1dJ/I7BcncjeFQmEE=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703246, 1675111246),
+(128, 56, 'XmQzfOJKapXlxp1RWMtVrzL3UwvdaM1ZAbstJ2b3LAc=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703246, 1675111246),
+(129, 56, 'FsvKDH5jR28u7AUckjJaW3+ogmkKvW+vsKbHWnMQwew=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703380, 1675111380),
+(130, 56, 'KjMxStNnky2X/i5eBSlpc0rX8Ky+u1xCtJt9OmIAlvo=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703380, 1675111380),
+(131, 56, 'XCbUHyPU+DAVvPPfhCty7IePVaGuHawPgq0xMQBlyZ0=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703453, 1675111453),
+(132, 56, 'x3dpEXdbPeGDzH/A2kJf54fXijdg4ldEIXMmbGw+nBo=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703453, 1675111453),
+(133, 56, 'wvpIr2xgdJ70tiKo6HqXuRWe2K0aoTDpZ8YvHLUqF8k=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703594, 1675111594),
+(134, 56, 'ngSeh32EdM8ZTF8Mi5krFeNl128r/Hor1SjPIUN6Tv8=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703594, 1675111594),
+(135, 56, 's9kJQoZ6ZXfD8gRaONAxqQMxln8AUPOm/RIzRZusJVg=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703684, 1675111684),
+(136, 56, 'zqCqzzNx0g0OArzqieWtPAp/RZIfzAM/B07xdE/Kllc=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703684, 1675111684),
+(137, 56, 'QUr7M0j9Fxn5aT1HWk1jO1kQqy8q0EynZ9yuGREc91k=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1675716561, 1675111761),
+(138, 56, 'Ip3vAhAemTinrJp5P+vctQthOCZYozh/ofhJ2kvpDFM=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703792, 1675111792),
+(139, 56, '2BEJmV53MoGUobQHDgXlmqosJ29Wqa9JdrpcmYGLeNc=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1677703792, 1675111792),
+(140, 56, '01TMlKeOaTLNbfxDuu5cFz0CrCWigmCfpKs0tAgZczQ=', NULL, NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0', 1675716699, 1675111899),
+(141, 30, 'kH37lOb0Xe5eY5GLrbbQy1KfxDnNXc1YiNRpf7anxNw=', NULL, NULL, 'PostmanRuntime/7.30.0', 1675802991, 1675802991),
+(142, 30, 'mXojoSyiAXPP3nTzfLOlqdIn9fJLTfebKKCdPQxkJ5Q=', NULL, NULL, 'PostmanRuntime/7.30.0', 1675803013, 1675803013);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reset_passwords`
+--
+
+CREATE TABLE `reset_passwords` (
+  `id` int UNSIGNED NOT NULL,
+  `user_id` int UNSIGNED NOT NULL,
+  `code` varchar(48) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `ip_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `user_agent` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `created_at` int UNSIGNED NOT NULL,
+  `updated_at` int UNSIGNED DEFAULT NULL,
+  `reset` tinyint UNSIGNED NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int UNSIGNED NOT NULL,
+  `username` varchar(20) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `url` varchar(60) DEFAULT NULL,
+  `active` tinyint DEFAULT '0',
+  `banned` tinyint DEFAULT NULL,
+  `created_at` int DEFAULT NULL,
+  `deleted_at` int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `url`, `active`, `banned`, `created_at`, `deleted_at`) VALUES
+(30, 'Stdimitrov', 'devgitst@gmail.com', '$2y$10$RzNDeVowekdueDZ5YkMwWOcOoADFt2OfrK5AV0nW5ptCb5ENVKPcC', 'stdimitrov', 1, NULL, 1675433087, NULL),
+(56, 'stdimitrov05', 'devgitst@gmail.com', '$2y$10$Zi9PZHhBV0ZVcTgrc0VjUuhz4addMetugIBpK0OulRCHRhm8WnKYO', 'stdimitrov05', 1, 0, 1675110162, NULL);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `avatars`
+--
+ALTER TABLE `avatars`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `users_avatars_user_id` (`user_id`);
+
+--
+-- Indexes for table `email_confirmations`
+--
+ALTER TABLE `email_confirmations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `token` (`token`),
+  ADD KEY `userId` (`user_id`);
+
+--
+-- Indexes for table `failed_logins`
+--
+ALTER TABLE `failed_logins`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `userId` (`user_id`);
+
+--
+-- Indexes for table `logins_history`
+--
+ALTER TABLE `logins_history`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `userId` (`user_id`),
+  ADD KEY `fcmToken` (`fcm_token`),
+  ADD KEY `jti` (`jti`);
+
+--
+-- Indexes for table `reset_passwords`
+--
+ALTER TABLE `reset_passwords`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `code` (`code`),
+  ADD KEY `userId` (`user_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `avatars`
+--
+ALTER TABLE `avatars`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `email_confirmations`
+--
+ALTER TABLE `email_confirmations`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+
+--
+-- AUTO_INCREMENT for table `failed_logins`
+--
+ALTER TABLE `failed_logins`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+
+--
+-- AUTO_INCREMENT for table `logins_history`
+--
+ALTER TABLE `logins_history`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=143;
+
+--
+-- AUTO_INCREMENT for table `reset_passwords`
+--
+ALTER TABLE `reset_passwords`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `avatars`
+--
+ALTER TABLE `avatars`
+  ADD CONSTRAINT `users_avatars_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `email_confirmations`
+--
+ALTER TABLE `email_confirmations`
+  ADD CONSTRAINT `fk_EmailConfirmations_Users_userId` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `logins_history`
+--
+ALTER TABLE `logins_history`
+  ADD CONSTRAINT `fk_LoginsHistory_Users_userId` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `reset_passwords`
+--
+ALTER TABLE `reset_passwords`
+  ADD CONSTRAINT `fk_ResetPasswords_Users_userId` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

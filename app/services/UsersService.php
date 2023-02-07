@@ -73,6 +73,15 @@ class UsersService extends AbstractService
      */
     public function uploadedImage(array $data)
     {
+        $userId = $this->authService->getIdentity();
+
+        if (!$userId) {
+            throw  new ServiceException(
+                "User is not found",
+                self::ERROR_USER_NOT_FOUND
+            );
+        }
+
         $data['file']['name'] = time();
         $supportTypes = [
             "image/png",
@@ -111,9 +120,10 @@ class UsersService extends AbstractService
 
 
         try {
-            $this->db->begin();
             $avatar = new Avatars();
             $avatar->assign($data['file']);
+            $avatar->user_id = $userId ;
+            $avatar->name = $data['file']['name'] . "." . $imageType;
             $result = $avatar->create();
             if (!$result) {
                 throw new ServiceException(
@@ -125,36 +135,31 @@ class UsersService extends AbstractService
             $uploadFolder = '/var/www/php/images/' . $data['file']['name'] . "." . $imageType;
             $uploaded = move_uploaded_file($data['file']['tmp_name'], $uploadFolder);
 
-            if ($uploaded === false ) {
+            if ($uploaded === false) {
                 throw  new ServiceException(
                     "Unable to upload image",
                     self::ERROR_UNABLE_TO_UPLOAD_IMAGE
                 );
             }
 
-            $manager =  new ImageManager(['driver' => 'imagick']);
+            $manager = new ImageManager(['driver' => 'imagick']);
             $image = $manager->make($uploadFolder);
-            $image->resize(320,240);
+            $image->resize(320, 240);
 
             // Remove origin image
             $isRemoveImage = unlink($uploadFolder);
 
-            if ( $isRemoveImage === true) {
+            if ($isRemoveImage === true) {
                 $image->save($uploadFolder);
             }
 
 
 
-            $this->db->commit();
-
         } catch (\PDOException $e) {
-            $this->db->rollback();
             throw new ServiceException($e->getMessage(), $e->getCode(), $e);
         }
 
-        return [
-            'avatarId' => $avatar->id,
-        ];
+        return null;
 
     }
 
