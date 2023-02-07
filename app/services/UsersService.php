@@ -122,7 +122,7 @@ class UsersService extends AbstractService
                 );
             }
 
-            $uploadFolder = '/var/www/php/files/' . $data['file']['name'] . "." . $imageType;
+            $uploadFolder = '/var/www/php/images/' . $data['file']['name'] . "." . $imageType;
             $uploaded = move_uploaded_file($data['file']['tmp_name'], $uploadFolder);
 
             if ($uploaded === false ) {
