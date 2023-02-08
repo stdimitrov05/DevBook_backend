@@ -9,6 +9,7 @@ use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
 use App\Services\AuthService;
+use App\Validation\ChangePasswordAsLoggedValidation;
 use App\Validation\ChangePasswordValidation;
 use App\Validation\ImageValidation;
 use App\Validation\LoginValidation;

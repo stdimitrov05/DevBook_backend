@@ -29,6 +29,9 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     const ERROR_UNABLE_UPDATE_USER = 11004;
     const ERROR_UNABLE_CREATE_AVATAR = 11005;
     const ERROR_UNABLE_TO_UPLOAD_IMAGE = 11006;
+    const ERROR_PASSWORD_NOT_FOUND =11007;
+    const ERROR_PASSWORD_NOT_MATCH =11008;
+    const ERROR_PASSWORD_INCORRECT =11009;
 
 
 

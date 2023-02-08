@@ -35,6 +35,24 @@ $app->mount($avatarCollection);
 
 
 /*============================
+Users
+=============================*/
+
+$usersCollection = new \Phalcon\Mvc\Micro\Collection();
+$usersCollection->setPrefix(API_VERSION . '/users');
+$usersCollection->setHandler('\App\Controllers\UsersController', true);
+
+// Uploaded avatar
+$usersCollection->post(
+    '/{id:[1-9][0-9]*}/change-password',
+    'changePasswordAction'
+);
+
+
+$app->mount($usersCollection);
+
+
+/*============================
 Authentication
 =============================*/
 
@@ -47,11 +65,7 @@ $authCollection->post(
     '/signup',
     'signupAction'
 );
-// Uploaded avatar
-$authCollection->post(
-    '/avatar',
-    'uploadAvatartAction'
-);
+
 // Confirm email
 $authCollection->post(
     '/users/email/confirm',

@@ -69,7 +69,7 @@ class AvatarsService extends AbstractService
                 break;
         };
 
-        $uploadFolder = '/var/www/php/images' . $data['file']['name'] . "." . $imageType;
+        $uploadFolder = '/var/www/php/images/' . $data['file']['name'] . "." . $imageType;
         $uploaded = move_uploaded_file($data['file']['tmp_name'], $uploadFolder);
 
 
@@ -88,7 +88,7 @@ class AvatarsService extends AbstractService
 
         } else {
             // remove old avatar
-            unlink('/var/www/php/images' . $isAvatar->name);
+            unlink('/var/www/php/images/' . $isAvatar->name);
             $imageName = $data['file']['name'] . "." . $imageType;
             $sql = "UPDATE avatars 
                 SET name = :name, type = :type, size = :size, updated_at=:createdAt   

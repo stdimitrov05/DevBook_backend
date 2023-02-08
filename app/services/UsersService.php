@@ -62,6 +62,52 @@ class UsersService extends AbstractService
         ];
 
     }
+    /**
+     * Change Password
+     * @param array $data
+     * @return  array
+     */
+    public function changePassword(array $data)
+    {
+        $userId = $this->authService->getIdentity();
+        $currentPassword = $data['currentPassword'];
+        $newPassword = $data['newPassword'];
+        $confirmPassword = $data['confirmPassword'];
 
+        $sql = "SELECT password FROM users WHERE id = :userId";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("userId", $userId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $userPassword = $stmt->fetchColumn();
+
+
+        if (!$userPassword) {
+            throw new ServiceException(
+                "The password you entered does not exist",
+                self::ERROR_PASSWORD_NOT_FOUND
+            );
+        }
+        if (!$this->security->checkHash($currentPassword, $userPassword)) {
+            throw new ServiceException("You entered an incorrect password", self::ERROR_PASSWORD_INCORRECT);
+        }
+
+        if ($newPassword != $confirmPassword){
+            throw new ServiceException(
+                "The passwords do not match",
+                self::ERROR_PASSWORD_NOT_MATCH
+            );
+        }
+
+        $hashNewPass = $this->security->hash($newPassword);
+
+        $sql = "UPDATE users SET password =:newPass WHERE id =:userId";
+        $db = $this->db->prepare($sql);
+        $db->bindParam('newPass', $hashNewPass, \PDO::PARAM_STR);
+        $db->bindParam('userId', $userId, \PDO::PARAM_INT);
+        $db->execute();
+
+
+        return null;
+    }
 
 }

@@ -30,17 +30,18 @@ class AuthService extends AbstractService
 
         $user = Users::findFirst(
             [
-                'conditions' => 'email = :email: OR username = :username:',
+                'conditions' => 'email = :email: OR username = :username: ',
                 'bind' => [
                     'email' => $email,
                     'username' => $email
                 ],
-                'bindTypes'  => [
+                'bindTypes' => [
                     Column::BIND_PARAM_STR,
                     Column::BIND_PARAM_STR
                 ],
             ]
         );
+
 
         if (!$user) {
             $this->registerUserThrottling(0);
@@ -62,8 +63,8 @@ class AuthService extends AbstractService
         if (!empty($user->deleted_at)) {
             $this->registerUserThrottling(0);
             throw new ServiceException(
-                'Wrong email or password',
-                self::ERROR_WRONG_EMAIL_OR_PASSWORD
+                'Account has deleted',
+                self::ERROR_USER_HAS_DELETED
             );
         }
 
@@ -93,14 +94,14 @@ class AuthService extends AbstractService
         $login->user_id = $user->id;
         $login->jti = $tokens['jti'];
 
-        if (isset($credentials['fcmToken']) && ! empty($credentials['fcmToken'])) {
+        if (isset($credentials['fcmToken']) && !empty($credentials['fcmToken'])) {
             $login->fcm_token = $credentials['fcmToken'];
         }
 
         $clientIpAddress = $this->request->getClientAddress();
         $userAgent = $this->request->getUserAgent();
 
-        $login->user_agent = empty($userAgent) ? null : substr( $userAgent,0,250);
+        $login->user_agent = empty($userAgent) ? null : substr($userAgent, 0, 250);
         $login->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
         $login->expire_at = $tokens['expireAt'];
         $login->save();
@@ -129,13 +130,14 @@ class AuthService extends AbstractService
             'iss' => $this->config->application->domain, // Issuer
             'nbf' => $issuedAt, // Not before
             'exp' => $issuedAt + $this->config->auth->accessTokenExpire, // Expire
-            'userId' => $user->id
+            'userId' => $user->id,
+            'username'=>$user->username
         ];
 
         // Longer expiration time if user click remember me
         $refreshExpire = $remember == 1
             ? $this->config->auth->refreshTokenRememberExpire
-            : $this->config->Fauth->refreshTokenExpire;
+            : $this->config->auth->refreshTokenExpire;
 
         // Generate jti
         $jti = base64_encode(openssl_random_pseudo_bytes(32));
@@ -170,7 +172,6 @@ class AuthService extends AbstractService
         try {
             $key = base64_decode($this->config->auth->key);
             $jwt = $this->getBearerToken();
-
             if ($jwt === false) {
                 throw new ServiceException(
                     'Missing token',
@@ -187,7 +188,7 @@ class AuthService extends AbstractService
                     'order' => 'created_at DESC',
                     'bind' => [
                         'jti' => $jwtDecoded->jti,
-                        'userId' => $jwtDaecoded->userId
+                        'userId' => $jwtDecoded->userId
                     ],
                     'limit' => 1
                 ]
@@ -257,7 +258,7 @@ class AuthService extends AbstractService
     {
         $authorizationHeader = $this->request->getHeader('Authorization');
 
-        if ($authorizationHeader AND preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
+        if ($authorizationHeader and preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
             return $matches[1];
         } else {
             return false;
@@ -291,12 +292,12 @@ class AuthService extends AbstractService
     private function registerUserThrottling($userId)
     {
         $failedLogin = new LoginsFailed();
-        $failedLogin->user_id = $userId;
+        $failedLogin->userId = $userId;
         $clientIpAddress = $this->request->getClientAddress();
         $userAgent = $this->request->getUserAgent();
 
-        $failedLogin->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
-        $failedLogin->user_agent = empty($userAgent) ? null : substr( $userAgent,0,250);
+        $failedLogin->ipAddress = empty($clientIpAddress) ? null : $clientIpAddress;
+        $failedLogin->userAgent = empty($userAgent) ? null : substr($userAgent, 0, 250);
         $failedLogin->attempted = time();
         $failedLogin->save();
 
@@ -311,7 +312,7 @@ class AuthService extends AbstractService
         switch ($attempts) {
             case 1:
             case 2:
-                // no delay
+                // no §delay
                 break;
             case 3:
             case 4:
@@ -369,6 +370,14 @@ class AuthService extends AbstractService
                 $resetPassword->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
                 $resetPassword->user_agent = empty($userAgent) ? null : substr($userAgent, 0, 250);
                 $resetPassword->save();
+
+                $data = [
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'token' => $resetPassword->code
+                ];
+
+                $this->mailer->changePassword($data);
             }
 
         } catch (\Exception $e) {
@@ -381,7 +390,7 @@ class AuthService extends AbstractService
     /**
      * Check reset password link token
      *
-     * @param string  $token
+     * @param string $token
      * @return array
      * @throws ServiceException
      */
@@ -396,7 +405,7 @@ class AuthService extends AbstractService
             );
         }
 
-        $expiredToken = time() - $resetPassword->created_at > 8*60*60;
+        $expiredToken = time() - $resetPassword->created_at > 8 * 60 * 60;
 
         if ($resetPassword->reset != 0 || $expiredToken === true) {
             throw new ServiceException(
@@ -426,7 +435,7 @@ class AuthService extends AbstractService
                 );
             }
 
-            $expiredToken = time() - $resetPassword->created_at > 8*60*60;
+            $expiredToken = time() - $resetPassword->created_at > 8 * 60 * 60;
 
             if ($resetPassword->reset != 0 || $expiredToken === true) {
                 throw new ServiceException(
@@ -446,7 +455,7 @@ class AuthService extends AbstractService
             }
 
             // Change user password
-            $user->password = $this->security->hash($data['password']);
+            $user->password = $this->getDI()->getSecurity()->hash($data['password']);
             $result = $user->update();
 
             if (!$result) {
@@ -529,7 +538,7 @@ class AuthService extends AbstractService
                 );
             }
 
-            $expiredToken = time() - $emailConfirmation->created_at > 24*60*60;
+            $expiredToken = time() - $emailConfirmation->created_at > 24 * 60 * 60;
 
             // Is the token expired
             if ($expiredToken === true) {
@@ -556,6 +565,7 @@ class AuthService extends AbstractService
                     self::ERROR_USER_NOT_FOUND
                 );
             }
+
 
             // Change user to active
             $user->active = 1;
@@ -619,5 +629,6 @@ class AuthService extends AbstractService
             throw new ServiceException($e->getMessage(), $e->getCode(), $e);
         }
     }
+
 
 }
