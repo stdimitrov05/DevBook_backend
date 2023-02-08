@@ -110,5 +110,6 @@ $di->setShared(
 $di->setShared('frontendService', '\App\Services\FrontendService');
 $di->setShared('usersService', '\App\Services\UsersService');
 $di->setShared('authService', '\App\Services\AuthService');
+$di->setShared('avatarsService', '\App\Services\AvatarsService');
 
 return $di;

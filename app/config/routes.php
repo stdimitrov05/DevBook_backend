@@ -17,6 +17,24 @@ $app->mount($frontendCollection);
 
 
 /*============================
+Avatar
+=============================*/
+
+$avatarCollection = new \Phalcon\Mvc\Micro\Collection();
+$avatarCollection->setPrefix(API_VERSION . '/avatars');
+$avatarCollection->setHandler('\App\Controllers\AvatarController', true);
+
+// Uploaded avatar
+$avatarCollection->post(
+    '/upload',
+    'uploadAction'
+);
+
+
+$app->mount($avatarCollection);
+
+
+/*============================
 Authentication
 =============================*/
 

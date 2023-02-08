@@ -49,6 +49,13 @@ class Avatars extends \Phalcon\Mvc\Model
     public $created_at;
 
     /**
+     *
+     * @var integer
+     * @Column(type="integer", length=11, nullable=false)
+     */
+    public $uploaded_at;
+
+    /**
      * Initialize method for model.
      */
     public function initialize()
