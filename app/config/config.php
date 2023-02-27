@@ -31,6 +31,7 @@ return new \Phalcon\Config\Config(
             'refreshTokenRememberExpire' => getenv('JWT_REFRESH_TOKEN_REMEMBER_EXPIRE'),
             'ignoreUri' => [
                 '/',
+                '/jwt:GET',
             ]
         ],
     ]

@@ -16,6 +16,23 @@ $frontendCollection->get(
 $app->mount($frontendCollection);
 
 
+
+/*============================
+Authentication
+=============================*/
+
+$authCollection = new \Phalcon\Mvc\Micro\Collection();
+$authCollection->setPrefix(API_VERSION);
+$authCollection->setHandler('\App\Controllers\AuthController', true);
+
+$authCollection->get(
+    '/jwt',
+    'jwtAction'
+);
+
+$app->mount($authCollection);
+
+
 // Not found URLs
 $app->notFound(
     function () use ($app) {
