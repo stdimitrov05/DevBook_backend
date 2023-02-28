@@ -104,10 +104,10 @@ class AuthService extends AbstractService
      * refreshJwtTokens
      * @retrun array
      */
-    public function refreshJwtTokens()
+    public function refreshJwtTokens(): array
     {
         $jwt = $this->getBearerToken();
-
+        $newTokens = [];
         if (!$jwt) {
             throw  new ServiceException(
                 'Refresh token is not found',
@@ -115,24 +115,57 @@ class AuthService extends AbstractService
             );
         }
 
-        $parser = new Parser();
-//        decode Jwt
-        $decodeJwt = $parser->parse($jwt)->getClaims();
-        $jti = $decodeJwt->getPayload()['jti'];
-        $userId = $decodeJwt->getPayload()['sub'];
+        $decodedJWT = $this->decodeJWT($jwt);
+        $jti = $decodedJWT->getPayload()['jti'];
+        $userId = $decodedJWT->getPayload()['sub'];
 
-        $redisData =  $this->getRedisDataByUserID($userId);
+        $redisData = $this->getRedisDataByUserID($userId);
 //       Check redis refresh token if is valid or same
         if ($redisData['jti'] === $jti && $redisData['expireAt'] > time()) {
+            $newTokens = $this->generateJWT($userId, 1);
+            $decodeToken = $this->decodeJWT($newTokens['refreshToken']);
 
-            var_dump($redisData['jti'],$decodeJwt   );die;
+            $token = [
+                'jti' => $decodeToken->getPayload()['jti'],
+                'expireAt' => $decodeToken->getPayload()['exp'],
+
+            ];
+
+            $this->setJWTInRedis($userId, $token);
+
+            $newTokens =
+                [
+                    'accessToken' => $newTokens['accessToken'],
+                    'refreshToken' => $newTokens['refreshToken'],
+                ];
+
+        } else if ($redisData['jti'] === $jti && $redisData['expireAt'] < time()) {
+//         If refresh token has expired
+            throw new  ServiceException(
+                'Session has expired',
+                self::ERROR_NOT_EXISTS
+            );
+        } else {
+            throw new  ServiceException(
+                'Missing token',
+                self::ERROR_NOT_EXISTS
+            );
         }
 
-
-
+        return $newTokens;
 
     }
 
+    /**
+     * Decode JWT tokens
+     * @params string $token
+     * @retrun  object
+     */
+    private function decodeJWT(string $token): object
+    {
+        $parser = new Parser();
+        return $parser->parse($token)->getClaims();
+    }
 
     # Generate JWT tokens
 
