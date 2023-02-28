@@ -35,6 +35,13 @@ $authCollection->post(
     '/login',
     'loginAction'
 );
+
+// Refresh tokens
+$authCollection->get(
+    '/refresh/tokens',
+    'refreshJWTAction'
+);
+
 $app->mount($authCollection);
 
 

@@ -30,4 +30,5 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     const ERROR_USER_NOT_ACTIVE = 12010;
     const ERROR_WRONG_EMAIL_OR_PASSWORD = 12020;
 
+
 }

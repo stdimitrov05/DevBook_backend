@@ -9,6 +9,7 @@ use Phalcon\Db\Column;
 use Phalcon\Encryption\Security\JWT\Builder;
 use Phalcon\Encryption\Security\JWT\Exceptions\ValidatorException;
 use Phalcon\Encryption\Security\JWT\Signer\Hmac;
+use Firebase\JWT\JWT;
 
 /**
  * Business-logic for site frontend
@@ -98,6 +99,31 @@ class AuthService extends AbstractService
         ];
 
     }
+
+    /**
+     * refreshJwtTokens
+     * @retrun array
+     */
+    public function refreshJwtTokens()
+    {
+        $jwt = $this->getBearerToken();
+        $key = base64_decode($this->config->auth->key);
+
+
+        if (!$jwt) {
+            throw  new ServiceException(
+                'Refresh token is not found',
+                self::ERROR_NOT_EXISTS
+            );
+        }
+
+
+//        JWT::decode($jwt, $key, ['HS512']);
+        var_dump(JWT::decode($jwt, $key, ['HS512']));
+        die;
+
+    }
+
 
     # Generate JWT tokens
 
@@ -203,14 +229,13 @@ class AuthService extends AbstractService
     }
 
 
-
     /**
      * Implements login throttling
      * Reduces the effectiveness of brute force attacks
      *
      * @param int $userId
      */
-    private function registerUserThrottling($userId)
+    private function registerUserThrottling(int $userId)
     {
         $failedLogin = new LoginsFailed();
         $failedLogin->user_id = $userId;
@@ -218,7 +243,7 @@ class AuthService extends AbstractService
         $userAgent = $this->request->getUserAgent();
 
         $failedLogin->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
-        $failedLogin->user_agent = empty($userAgent) ? null : substr( $userAgent,0,250);
+        $failedLogin->user_agent = empty($userAgent) ? null : substr($userAgent, 0, 250);
         $failedLogin->attempted = time();
         $failedLogin->save();
 
@@ -259,7 +284,22 @@ class AuthService extends AbstractService
                 self::ERROR_USER_NOT_ACTIVE
             );
         }
+    }
 
 
+    /**
+     * Get authorization header
+     *
+     * @return mixed
+     */
+    private function getBearerToken()
+    {
+        $authorizationHeader = $this->request->getHeader('Authorization');
+
+        if ($authorizationHeader and preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
+            return $matches[1];
+        } else {
+            return false;
+        }
     }
 }

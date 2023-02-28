@@ -39,7 +39,7 @@ class AuthController extends AbstractController
         }
 
         try {
-            $response = $this->authService->login((array)$data );
+            $response = $this->authService->login((array)$data);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
@@ -56,4 +56,23 @@ class AuthController extends AbstractController
         return $response;
     }
 
+    /**
+     * refreshJWTAction
+     * @retrun  array
+     */
+
+    public function refreshJWTAction(): array
+    {
+        try {
+            $tokens = $this->authService->refreshJwtTokens();
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_NOT_EXISTS
+                => new Http404Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+        }
+
+        return $tokens;
+    }
 }
