@@ -25,11 +25,16 @@ $authCollection = new \Phalcon\Mvc\Micro\Collection();
 $authCollection->setPrefix(API_VERSION);
 $authCollection->setHandler('\App\Controllers\AuthController', true);
 
-$authCollection->get(
-    '/jwt',
-    'jwtAction'
+// Signup
+$authCollection->post(
+    '/signup',
+    'signupAction'
 );
-
+// Login
+$authCollection->post(
+    '/login',
+    'loginAction'
+);
 $app->mount($authCollection);
 
 

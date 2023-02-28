@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\ServiceException;
+use App\Models\LoginsFailed;
+use App\Models\Users;
+use Phalcon\Db\Column;
 use Phalcon\Encryption\Security\JWT\Builder;
 use Phalcon\Encryption\Security\JWT\Exceptions\ValidatorException;
 use Phalcon\Encryption\Security\JWT\Signer\Hmac;
@@ -17,36 +20,83 @@ use Phalcon\Encryption\Security\JWT\Signer\Hmac;
 class AuthService extends AbstractService
 {
     /**
-     * @return null
+     * @param array $data
+     * @return array
      * @throws ValidatorException
      */
-    public function index()
+    public function login(array $data): array
     {
-        $userId = 5;
-        $tokens = $this->generateJWT($userId, 1);
+        $email = strtolower($data['email']);
 
-        $redis = $this->di->get('redis');
+        $user = Users::findFirst(
+            [
+                'conditions' => 'email = :email: OR username = :username:',
+                'bind' => [
+                    'email' => $email,
+                    'username' => $email
+                ],
+                'bindTypes' => [
+                    Column::BIND_PARAM_STR,
+                    Column::BIND_PARAM_STR
+                ],
+            ]
+        );
 
-        (array) $redisData = $this->getRedisDataByUserID($userId);
-        var_dump($redisData['jti']);
-        die;
-        // Define the array values
-        $data = [
-            'userId' => $userId,
-            'jti' => $tokens['jti'],
-            'expireAt' => $tokens['expireAt'] // Set the expiration time to one hour from now
-        ];
-
-        $redisData = $redis->set('users:' . $userId . ':tokens', json_encode($data));
-
-        if ($redisData === false) {
-            throw  new ServiceException(
-                'Can`t set data in redis DB',
-                self::ERROR_REDIS_NOT_SET_DATA
+        if (!$user) {
+            $this->registerUserThrottling(0);
+            throw new ServiceException(
+                'Wrong email or password',
+                self::ERROR_WRONG_EMAIL_OR_PASSWORD
             );
         }
 
-        return null;
+        // Check the password
+        if (!$this->security->checkHash($data['password'], $user->password)) {
+            $this->registerUserThrottling($user->id);
+            throw new ServiceException(
+                'Wrong email or password',
+                self::ERROR_WRONG_EMAIL_OR_PASSWORD
+            );
+        }
+
+        if (!empty($user->deleted_at)) {
+            $this->registerUserThrottling(0);
+            throw new ServiceException(
+                'Wrong email or password',
+                self::ERROR_WRONG_EMAIL_OR_PASSWORD
+            );
+        }
+
+        // Check if the user was flagged
+        $this->checkUserFlags($user);
+
+
+//        Generate JWT
+        $tokens = $this->generateJWT($user->id, $data['remember']);
+
+        if (!$tokens) {
+            throw new ServiceException(
+                "Unable to create jwt tokens",
+                self::ERROR_NOT_EXISTS
+            );
+        }
+
+//        Save into redis data
+
+        $redis = $this->setJWTInRedis($user->id, $tokens);
+
+        if ($redis !== null) {
+            throw  new ServiceException(
+                "Unable to set redis data",
+                self::ERROR_NOT_EXISTS
+            );
+        }
+
+        return [
+            'accessToken' => $tokens['accessToken'],
+            'refreshToken' => $tokens['refreshToken']
+        ];
+
     }
 
     # Generate JWT tokens
@@ -97,7 +147,7 @@ class AuthService extends AbstractService
         if (!$accessToken || !$refreshToken) {
             throw  new ServiceException(
                 'Access or refresh token is not found',
-                self::ERROR_ALREADY_EXISTS
+                self::ERROR_NOT_EXISTS
             );
         }
 
@@ -120,8 +170,96 @@ class AuthService extends AbstractService
     {
         $redis = $this->di->get('redis');
         (array)$getData = $redis->get('users:' . $userId . ':tokens');
-        (array)$response = json_decode($getData, true);
+        (array)$result = json_decode($getData, true);
 
-        return !$response ? [] : $response;
+        return !$result ? [] : $result;
+    }
+
+    /**
+     * setJWTInRedis
+     * @param int $userId
+     * @param array $tokens
+     * @retrun null
+     */
+    private function setJWTInRedis(int $userId, array $tokens)
+    {
+        $redis = $this->di->get('redis');
+
+        $data = [
+            'jti' => $tokens['jti'],
+            'expireAt' => $tokens['expireAt'],
+        ];
+
+        $redisData = $redis->set('users:' . $userId . ':tokens', json_encode($data));
+
+        if ($redisData === false) {
+            throw  new ServiceException(
+                'Can`t set data in redis DB',
+                self::ERROR_REDIS_NOT_SET_DATA
+            );
+        }
+
+        return null;
+    }
+
+
+
+    /**
+     * Implements login throttling
+     * Reduces the effectiveness of brute force attacks
+     *
+     * @param int $userId
+     */
+    private function registerUserThrottling($userId)
+    {
+        $failedLogin = new LoginsFailed();
+        $failedLogin->user_id = $userId;
+        $clientIpAddress = $this->request->getClientAddress();
+        $userAgent = $this->request->getUserAgent();
+
+        $failedLogin->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
+        $failedLogin->user_agent = empty($userAgent) ? null : substr( $userAgent,0,250);
+        $failedLogin->attempted = time();
+        $failedLogin->save();
+
+        $attempts = LoginsFailed::count([
+            'ip_address = ?0 AND attempted >= ?1',
+            'bind' => [
+                $this->request->getClientAddress(),
+                time() - 3600 * 6 // 6 minutes
+            ]
+        ]);
+
+        switch ($attempts) {
+            case 1:
+            case 2:
+                // no delay
+                break;
+            case 3:
+            case 4:
+                sleep(2);
+                break;
+            default:
+                sleep(4);
+                break;
+        }
+    }
+
+    /**
+     * Checks if the user is banned/inactive/suspended
+     *
+     * @param \App\Models\Users $user
+     * @throws ServiceException
+     */
+    private function checkUserFlags(Users $user)
+    {
+        if ($user->active != 1) {
+            throw new ServiceException(
+                'The user is inactive',
+                self::ERROR_USER_NOT_ACTIVE
+            );
+        }
+
+
     }
 }

@@ -124,5 +124,6 @@ $di->setShared(
 
 $di->setShared('frontendService', '\App\Services\FrontendService');
 $di->setShared('authService', '\App\Services\AuthService');
+$di->setShared('usersService', '\App\Services\UsersService');
 
 return $di;
