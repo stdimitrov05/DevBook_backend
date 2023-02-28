@@ -9,7 +9,7 @@ use Phalcon\Db\Column;
 use Phalcon\Encryption\Security\JWT\Builder;
 use Phalcon\Encryption\Security\JWT\Exceptions\ValidatorException;
 use Phalcon\Encryption\Security\JWT\Signer\Hmac;
-use Firebase\JWT\JWT;
+use Phalcon\Encryption\Security\JWT\Token\Parser;
 
 /**
  * Business-logic for site frontend
@@ -107,8 +107,6 @@ class AuthService extends AbstractService
     public function refreshJwtTokens()
     {
         $jwt = $this->getBearerToken();
-        $key = base64_decode($this->config->auth->key);
-
 
         if (!$jwt) {
             throw  new ServiceException(
@@ -117,10 +115,21 @@ class AuthService extends AbstractService
             );
         }
 
+        $parser = new Parser();
+//        decode Jwt
+        $decodeJwt = $parser->parse($jwt)->getClaims();
+        $jti = $decodeJwt->getPayload()['jti'];
+        $userId = $decodeJwt->getPayload()['sub'];
 
-//        JWT::decode($jwt, $key, ['HS512']);
-        var_dump(JWT::decode($jwt, $key, ['HS512']));
-        die;
+        $redisData =  $this->getRedisDataByUserID($userId);
+//       Check redis refresh token if is valid or same
+        if ($redisData['jti'] === $jti && $redisData['expireAt'] > time()) {
+
+            var_dump($redisData['jti'],$decodeJwt   );die;
+        }
+
+
+
 
     }
 
@@ -139,7 +148,7 @@ class AuthService extends AbstractService
         // Generate jti
         $jti = base64_encode(openssl_random_pseudo_bytes(32));
         // Defaults to 'sha512'
-        $signer = new Hmac();
+        $signer = new Hmac('sha512');
         $iat = time();
         $iss = $this->config->application->domain;
         $exp = $iat + $this->config->auth->accessTokenExpire;
