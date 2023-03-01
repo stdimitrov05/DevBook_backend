@@ -29,6 +29,7 @@ services:
       - ./app:/var/www/php/app
       - ./public:/var/www/php/public
       - ./tmp:/var/www/php/tmp
+      - ./public/images:/var/www/php/images
       - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./composer.json:/var/www/php/composer.json
       - composer_data:/var/www/php/vendor
@@ -36,6 +37,7 @@ services:
 
   redis:
     image: redis:7.0-alpine
+    container_name: redis
     volumes:
       - redis_data:/data
 

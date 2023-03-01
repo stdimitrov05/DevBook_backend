@@ -17,6 +17,44 @@ use App\Validation\SignupValidation;
  */
 class AuthController extends AbstractController
 {
+
+    /**
+    * signupAction
+     * @retrun  null
+     */
+
+    public function signupAction()
+    {
+        $data = [];
+
+        // Collect and trim request params
+        foreach ($this->request->getPost() as $key => $value) {
+            $data[$key] = $this->request->getPost($key, ['string', 'trim']);
+        }
+
+        // Start validation
+        $validation = new SignupValidation();
+        $messages = $validation->validate($data);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->usersService->create((array)$data);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_NOT_EXISTS,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+    }
+
     /**
      * loginAction
      * @return array
@@ -44,6 +82,7 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_NOT_EXISTS,
+                AbstractService::ERROR_UNABLE_TO_CREATE,
                 AbstractService::ERROR_REDIS_NOT_SET_DATA,
                 AbstractService::ERROR_USER_NOT_ACTIVE,
                 AbstractService::ERROR_WRONG_EMAIL_OR_PASSWORD,
@@ -67,7 +106,9 @@ class AuthController extends AbstractController
             $tokens = $this->authService->refreshJwtTokens();
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_NOT_EXISTS
+                AbstractService::ERROR_JWT_IS_NOT_FOUND,
+                AbstractService::ERROR_HAS_EXPIRED,
+                AbstractService::ERROR_JWT_IN_WHITE_LIST
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };

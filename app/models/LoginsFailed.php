@@ -54,5 +54,8 @@ class LoginsFailed extends Model
     public function initialize()
     {
         $this->setSource('failed_logins');
+        $this->belongsTo('user_id', '\App\Models\Users', 'id', [
+            'alias' => 'user'
+        ]);
     }
 }
