@@ -29,6 +29,7 @@ services:
       - ./app:/var/www/php/app
       - ./public:/var/www/php/public
       - ./tmp:/var/www/php/tmp
+      - ./app/views:/var/www/php/app/views
       - ./public/images:/var/www/php/images
       - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./composer.json:/var/www/php/composer.json
