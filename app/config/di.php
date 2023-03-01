@@ -61,10 +61,10 @@ $di->setShared('redis', function () use ($config) {
 $di->setShared('mailer', function () use ($config) {
     $phpMailer = new PHPMailer\PHPMailer\PHPMailer();
     $phpMailer->isSMTP();
-    $phpMailer->SMTPSecure = "tls";
-    $phpMailer->Host = 'mail.phalcon.ml';
+    $phpMailer->SMTPSecure = getenv("SMTPSECURE");
+    $phpMailer->Host = getenv("EMAIL_HOST");
     $phpMailer->SMTPAuth = true;
-    $phpMailer->Port = 587;
+    $phpMailer->Port = getenv("EMAIL_PORT");
     $phpMailer->Username = getenv("NOREPLY_EMAIL");
     $phpMailer->Password = getenv("NOREPLY_PASSWORD");
 

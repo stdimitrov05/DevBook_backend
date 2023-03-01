@@ -1,5 +1,4 @@
 <?php
-
 return new \Phalcon\Config\Config(
     [
         'database' => [
@@ -12,10 +11,13 @@ return new \Phalcon\Config\Config(
             'collation' => getenv('DATABASE_COLLATION')
         ],
         'application' => [
-            'controllersDir' => "app/controllers/",
-            'modelsDir' => "app/models/",
-            'emailsDir' => APP_PATH . '/views/emails/',
-            'logsDir' => BASE_PATH . '/tmp/logs/',
+            'logInDb' => true,
+            'migrationsDir' => '/app/migrations',
+            'migrationsTsBased' => true,
+            'controllersDir' => "/app/controllers/",
+            'modelsDir' => "/app/models/",
+            'emailsDir' =>  '/app/views/emails/',
+            'logsDir' => __DIR__ . '/tmp/logs/',
             'baseUri' => "/",
             'domain' => getenv('DOMAIN'),
             'publicUrl' => "https://" . getenv("DOMAIN"),
@@ -33,6 +35,7 @@ return new \Phalcon\Config\Config(
                 '/',
                 '/signup:POST',
                 '/login:POST',
+                '/forgotPassword:POST',
             ]
         ],
     ]

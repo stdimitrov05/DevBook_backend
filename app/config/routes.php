@@ -42,6 +42,12 @@ $authCollection->get(
     'refreshJWTAction'
 );
 
+// Forgot Password
+$authCollection->get(
+    '/forgotPassword',
+    'forgotPasswordAction'
+);
+
 $app->mount($authCollection);
 
 
