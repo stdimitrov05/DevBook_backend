@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use Phalcon\Db\Column;
+use Phalcon\Mvc\ModelInterface;
+
 class Avatars extends \Phalcon\Mvc\Model
 {
     /**

@@ -8,6 +8,8 @@ namespace App\Services;
  *
  * @property \Phalcon\Db\Adapter\Pdo\Mysql $db
  * @property \Phalcon\Config\Config $config
+ * @property AuthService $authService
+ * @property UsersService $usersService
  */
 abstract class AbstractService extends \Phalcon\DI\Injectable
 {

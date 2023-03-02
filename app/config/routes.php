@@ -15,7 +15,21 @@ $frontendCollection->get(
 
 $app->mount($frontendCollection);
 
+/*============================
+Users
+=============================*/
 
+$frontendCollection = new \Phalcon\Mvc\Micro\Collection();
+$frontendCollection->setPrefix(API_VERSION . '/users');
+$frontendCollection->setHandler('\App\Controllers\UsersController', true);
+
+// User Details for home page
+$frontendCollection->get(
+    '/{userId:[1-9][0-9]*}/details',
+    'userDetailsAction'
+);
+
+$app->mount($frontendCollection);
 
 /*============================
 Authentication
@@ -43,7 +57,7 @@ $authCollection->get(
 );
 
 // Forgot Password
-$authCollection->get(
+$authCollection->post(
     '/forgotPassword',
     'forgotPasswordAction'
 );

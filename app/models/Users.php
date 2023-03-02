@@ -40,6 +40,13 @@ class Users extends \Phalcon\Mvc\Model
 
     /**
      *
+     * @var integer
+     * @Column(type="integer")
+     */
+    public $balance;
+
+    /**
+     *
      * @var integer 0 or 1
      * @Column(type="integer", length=1, nullable=false)
      */

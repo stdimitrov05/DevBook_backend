@@ -7,6 +7,7 @@ use App\Exceptions\HttpExceptions\Http422Exception;
 use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
+use App\Validation\ForgotPasswordValidation;
 use App\Validation\LoginValidation;
 use App\Validation\SignupValidation;
 
@@ -116,4 +117,41 @@ class AuthController extends AbstractController
 
         return $tokens;
     }
+
+    /**
+     * forgotPasswordAction
+     * @retrun  array
+     */
+
+    public function forgotPasswordAction() : array
+    {
+        // Get email
+        $email = $this->request->getPost();
+
+        // Start validation
+        $validation = new ForgotPasswordValidation();
+        $messages = $validation->validate($email);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->authService->forgotPassword((string)$email['email']);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_IS_NOT_FOUND,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+
+    }
+
+
 }

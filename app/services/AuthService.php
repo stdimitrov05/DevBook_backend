@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\ServiceException;
+use App\Lib\Helper;
 use App\Models\LoginsFailed;
 use App\Models\Users;
 use Phalcon\Db\Column;
@@ -22,9 +23,9 @@ class AuthService extends AbstractService
 {
     // Constants
     // Redis names SETS
-    private const  usersUrl = 'users:';
-    private const  jtiUrl = ':jtis';
-    private const  whiteListUrl = 'wl_';
+    private const  usersPrefix = 'users:';
+    private const  jtiPostfix = ':jtis';
+    private const  whiteListPrefix = 'wl_';
 
 
     /**
@@ -148,7 +149,7 @@ class AuthService extends AbstractService
             );
         }
 
-        $generateToken = $this->generateJwtTokens($userId, 1);
+        $generateToken = $this->generateJwtTokens($userId);
 
         $newTokens = [
             'accessToken' => $generateToken['accessToken'],
@@ -170,12 +171,58 @@ class AuthService extends AbstractService
      * 'iat' => int 1677587383  -> time()
      * 'sub' => string '1'  -> UserID
      */
-    private function decodeJWT(string $token): object
+    public function decodeJWT(string $token): object
     {
         // Parse the token
         $parser = new Parser();
 
         return $parser->parse($token)->getClaims();
+    }
+
+    /**
+     * forgotPassword
+     * @param string $email
+     * @retrun array
+     */
+    public function forgotPassword(string $email): array
+    {
+        $this->db->begin();
+        // Check email
+        $user = Users::findFirstByEmail($email);
+
+        if (!$user) {
+            throw  new ServiceException(
+                "Sending email...",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
+        // Check user flags
+        $this->checkUserFlags($user);
+
+        // Generate confirmToken
+        $confirmToken  = Helper::generateToken();
+
+
+
+        var_dump($confirmToken);die;
+    }
+
+
+    /**
+     * Get authorization header
+     * @return false|string
+     */
+    public function getJwtToken(): bool|string
+    {
+        // Get jwt (refreshToken) from headers
+        $authorizationHeader = $this->request->getHeader('Authorization');
+
+        if ($authorizationHeader and preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
+            return $matches[1];
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -239,7 +286,7 @@ class AuthService extends AbstractService
         }
 
         // Set jwt tokens in redis
-        $isInRedis = $this->setJtiInRedis($userId, $jti);
+        $isInRedis = $this->setJtiInRedis($userId, $jti, $iat + $refreshExpire);
 
         if ($isInRedis !== null) {
             throw  new ServiceException(
@@ -262,19 +309,23 @@ class AuthService extends AbstractService
      * Set sets in  users: $userId : tokens on redis
      * @param int $userId
      * @param string $jti
+     * @param int $expire
      * @return null
      */
-    private function setJtiInRedis(int $userId, string $jti)
+    private function setJtiInRedis(int $userId, string $jti, int $expire)
     {
         $redis = $this->redis;
 
-        $setsName = self::usersUrl . $userId . self::jtiUrl;
-        (string)$wl = self::whiteListUrl . $jti;
+        $setsName = self::usersPrefix . $userId . self::jtiPostfix;
+        (string)$wl = self::whiteListPrefix . $jti;
 
-        // Set in sets jwt
-        $redis->SADD($setsName, $jti);
-        // WhiteList refreshToken
+        // Store jti in redis SETS
+        $redis->sAdd($setsName, $jti);
+        $redis->expire($setsName, $expire + 60);
+        // Whitelist refresh token jti
         $redis->set($wl, 1);
+        $redis->expire($wl, $expire + 60);
+
 
         return null;
     }
@@ -291,8 +342,8 @@ class AuthService extends AbstractService
     {
         $redis = $this->redis;
 
-        $setsName = self::usersUrl . $userId . self::jtiUrl;
-        (string)$wl = self::whiteListUrl . $jti;
+        $setsName = self::usersPrefix . $userId . self::jtiPostfix;
+        (string)$wl = self::whiteListPrefix . $jti;
 
         // Set in sets jwt
         $redis->SREM($setsName, $jti);
@@ -316,9 +367,9 @@ class AuthService extends AbstractService
 
         $redis = $this->redis;
         // Call whitelist : wl_$jti
-        (string)$wl = self::whiteListUrl . $jti;
+        (string)$wl = self::whiteListPrefix . $jti;
         // Call SETS : users:$userId:jti
-        (string)$setsName = self::usersUrl . $userId . self::jtiUrl;
+        (string)$setsName = self::usersPrefix . $userId . self::jtiPostfix;
         // Check jti (refreshToken id) in redis
         $setsJti = $redis->SISMEMBER($setsName, $jti);
         $isWl = $redis->get($wl);
@@ -387,19 +438,4 @@ class AuthService extends AbstractService
     }
 
 
-    /**
-     * Get authorization header
-     * @return false|string
-     */
-    private function getJwtToken(): bool|string
-    {
-        // Get jwt (refreshToken) from headers
-        $authorizationHeader = $this->request->getHeader('Authorization');
-
-        if ($authorizationHeader and preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
-            return $matches[1];
-        } else {
-            return false;
-        }
-    }
 }

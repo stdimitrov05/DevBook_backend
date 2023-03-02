@@ -24,10 +24,6 @@ class ForgotPasswordValidation extends Validation
                 new Email([
                     'message' => 'Enter a valid email.',
                     'cancelOnFail' => true
-                ]),
-                new Uniqueness([
-                    'model' => new Users(),
-                    'message' => 'Email address is already in use.'
                 ])
             ]
         );

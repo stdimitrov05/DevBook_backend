@@ -42,8 +42,8 @@ class UsersService extends AbstractService
         // Get type as string
         $types = $this->getTypeToString($file['file']['type']);
         // Def folders
-        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/m/d", time()) . '/' . $file['file']['name'] . "." . $types;
-        (string)$timeFolder = '/var/www/php/public/images/' . date("Y/m/d", time()) . '/';
+        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
+        (string)$timeFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/';
         // If exist time folder  created
         if (!is_dir($timeFolder)) {
             mkdir($timeFolder, 0755, true);
@@ -57,13 +57,13 @@ class UsersService extends AbstractService
                 self::ERROR_UNABLE_TO_CREATE
             );
         }
-
+        (string)$path = $this->config->application->domain . '/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
         // Call Avatar model
         $avatar = new Avatars();
         $avatar->assign($file['file']);
         $avatar->type = $types;
         $avatar->user_id = $user->id;
-        $avatar->path = $uploadFolder;
+        $avatar->path = $path;
         $avatar->name = $file['file']['name'] . "." . $types;
         $result = $avatar->create();
         // If not created
@@ -90,10 +90,64 @@ class UsersService extends AbstractService
 
     }
 
+
+    /**
+     * details
+     * @param int $userId
+     * @return array
+     */
+    public function details(int $userId): array
+    {
+        $result = [];
+        $jwt = $this->authService->getJwtToken();
+        $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+        $currentHour = date('H');
+
+        if ($currentHour < 12) {
+            $result['greeting'] ='Good morning';
+        } elseif ($currentHour < 18) {
+            $result['greeting'] = 'Good afternoon';
+        } else {
+            $result['greeting'] = 'Good evening';
+        }
+
+        if ($userId !== $loggedId) {
+            throw  new ServiceException(
+                "User is not authorized",
+                self::ERROR_USER_NOT_AUTHORIZED
+            );
+        }
+
+        $sql = "SELECT 
+                    u.username,
+                    u.balance,
+                    av.name,
+                    av.path
+                FROM users u
+                INNER JOIN avatars av ON av.user_id = u.id
+                WHERE u.id = :userId
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam('userId', $userId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $result['userDetails'] = $stmt->fetchAll();
+
+        if (!$result) {
+            throw new  ServiceException(
+                "Details is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
+        return $result;
+    }
+
+
     /**
      * Get from $_FILE  current type to string
      * @param string $type
-     * @retrun  string
+     * @return string
      */
 
     private function getTypeToString(string $type): string
