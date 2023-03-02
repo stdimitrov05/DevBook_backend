@@ -10,6 +10,7 @@ services:
     volumes:
       - ./app:/var/www/php/app
       - ./public:/var/www/php/public
+      - ./public/images:/var/www/php/public/images
       - ./.docker/nginx/conf.d:/etc/nginx/conf.d
     depends_on:
       - devbook_backend
@@ -30,7 +31,7 @@ services:
       - ./public:/var/www/php/public
       - ./tmp:/var/www/php/tmp
       - ./app/views:/var/www/php/app/views
-      - ./public/images:/var/www/php/images
+      - ./public/images:/var/www/php/public/images
       - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
       - ./composer.json:/var/www/php/composer.json
       - composer_data:/var/www/php/vendor

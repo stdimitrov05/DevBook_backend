@@ -22,11 +22,13 @@ class UsersService extends AbstractService
      */
     public function create(array $data)
     {
+        // Get uploaded file
         $file = $_FILES;
+        // Connecting with Users models
         $user = new Users();
+        // Insert data in database
         $user->assign($data);
-        $isAvatar = Avatars::findFirst($user->id);
-
+        // Save data in db
         $isCreated = $user->create();
 
         if ($isCreated !== true) {
@@ -35,81 +37,20 @@ class UsersService extends AbstractService
                 self::ERROR_NOT_EXISTS
             );
         }
-
+        // Generate name
         $file['file']['name'] = time();
-        $supportTypes = [
-            "image/png",
-            "image/jpg",
-            "image/jpeg",
-            "image/gif",
-        ];
-        $imageType = '';
-
-        switch ($file['file']['type']) {
-
-            case  "image/png" :
-                $imageType = "png";
-                break;
-
-            case  "image/jpg" :
-                $imageType = "jpg";
-                break;
-
-            case  "image/jpeg" :
-                $imageType = "jpeg";
-                break;
-
-            case  "image/gif" :
-                $imageType = "gif";
-                break;
-
-            default :
-                if (in_array($file['file']['type'], $supportTypes) === false) {
-                    throw  new ServiceException(
-                        "This format is not supported",
-                        self::ERROR_FORMAT_IS_NOT_SUPPORT
-                    );
-                }
-                break;
-        };
-        $uploadFolder = '/var/www/php/images/' . date("Y/m/d", time()) . '/' . $file['file']['name'] . "." . $imageType;
-
-        if (!is_dir('/var/www/php/images/' . date("Y/m/d", time()))) {
-            mkdir($uploadFolder, 0755, true);
-            $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
+        // Get type as string
+        $types = $this->getTypeToString($file['file']['type']);
+        // Def folders
+        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/m/d", time()) . '/' . $file['file']['name'] . "." . $types;
+        (string)$timeFolder = '/var/www/php/public/images/' . date("Y/m/d", time()) . '/';
+        // If exist time folder  created
+        if (!is_dir($timeFolder)) {
+            mkdir($timeFolder, 0755, true);
         }
-
+        // Move from temp to uploaded folder
         $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
-
-        if (!$isAvatar) {
-            $avatar = new Avatars();
-            $avatar->assign($file['file']);
-            $avatar->user_id = $user->id;
-            $avatar->path = $uploadFolder;
-            $avatar->name = $file['file']['name'] . "." . $imageType;
-            $result = $avatar->create();
-            if (!$result) {
-                throw new ServiceException(
-                    'Unable to create avatar',
-                    self::ERROR_UNABLE_TO_CREATE
-                );
-            }
-
-        } else {
-            // remove old avatar
-            unlink('/var/www/php/images/' . $isAvatar->name);
-            $imageName = $file['file']['name'] . "." . $imageType;
-            $sql = "UPDATE avatars 
-                SET name = :name, type = :type, size = :size, 
-                WHERE user_id =:userId ";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam("name", $imageName, \PDO::PARAM_STR);
-            $stmt->bindParam("type", $file['file']['type'], \PDO::PARAM_STR);
-            $stmt->bindParam("size", $file['file']['size'], \PDO::PARAM_INT);
-            $stmt->bindParam("userId", $userId, \PDO::PARAM_INT);
-            $stmt->execute();
-        }
-
+        // Can`t upload image
         if ($uploaded === false) {
             throw  new ServiceException(
                 "Unable to upload image",
@@ -117,20 +58,85 @@ class UsersService extends AbstractService
             );
         }
 
+        // Call Avatar model
+        $avatar = new Avatars();
+        $avatar->assign($file['file']);
+        $avatar->type = $types;
+        $avatar->user_id = $user->id;
+        $avatar->path = $uploadFolder;
+        $avatar->name = $file['file']['name'] . "." . $types;
+        $result = $avatar->create();
+        // If not created
+        if (!$result) {
+            throw new ServiceException(
+                'Unable to create avatar',
+                self::ERROR_UNABLE_TO_CREATE
+            );
+        }
+
+        // Resize image to 320x240
         $manager = new ImageManager(['driver' => 'imagick']);
         $image = $manager->make($uploadFolder);
         $image->resize(320, 240);
 
         // Remove origin image
         $isRemoveImage = unlink($uploadFolder);
-
+        // If all gone save to uploaded folder
         if ($isRemoveImage === true) {
             $image->save($uploadFolder);
         }
 
-
         return null;
 
+    }
+
+    /**
+     * Get from $_FILE  current type to string
+     * @param string $type
+     * @retrun  string
+     */
+
+    private function getTypeToString(string $type): string
+    {
+        (string)$fileType = '';
+
+        // Supports Types as array
+        $supportTypes = [
+            "image/png",
+            "image/jpg",
+            "image/jpeg",
+            "image/gif",
+        ];
+
+        // Check types
+        switch ($type) {
+            case  "image/png" :
+                $fileType = "png";
+                break;
+
+            case  "image/jpg" :
+                $fileType = "jpg";
+                break;
+
+            case  "image/jpeg" :
+                $fileType = "jpeg";
+                break;
+
+            case  "image/gif" :
+                $fileType = "gif";
+                break;
+
+            default :
+                if (in_array($type, $supportTypes) === false) {
+                    throw  new ServiceException(
+                        "This format is not supported",
+                        self::ERROR_FORMAT_IS_NOT_SUPPORT
+                    );
+                }
+                break;
+        };
+
+        return $fileType;
     }
 
 }
