@@ -62,6 +62,12 @@ $authCollection->post(
     'forgotPasswordAction'
 );
 
+// Confirm email
+$authCollection->post(
+    '/email-confirmations',
+    'emailConfirmAction'
+);
+
 $app->mount($authCollection);
 
 

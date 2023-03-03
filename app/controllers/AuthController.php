@@ -20,7 +20,7 @@ class AuthController extends AbstractController
 {
 
     /**
-    * signupAction
+     * signupAction
      * @retrun  null
      */
 
@@ -123,7 +123,7 @@ class AuthController extends AbstractController
      * @retrun  array
      */
 
-    public function forgotPasswordAction() : array
+    public function forgotPasswordAction(): array
     {
         // Get email
         $email = $this->request->getPost();
@@ -153,5 +153,28 @@ class AuthController extends AbstractController
 
     }
 
+    /**
+     * emailConfirmAction
+     * @retrun  array
+     */
+    public function emailConfirmAction(): array
+    {
+        $confirmToken = $this->request->getPost('token');
+
+        try {
+            $response = $this->authService->emailConfirm((string)$confirmToken);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_IS_NOT_FOUND,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+    }
 
 }

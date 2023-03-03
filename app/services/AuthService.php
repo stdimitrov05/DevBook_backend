@@ -437,5 +437,16 @@ class AuthService extends AbstractService
         }
     }
 
+    /**
+    * emailConfirm
+     * @param string $param
+     * @return  array
+     */
+    public function emailConfirm(string $param) : array
+    {
+
+
+    }
+
 
 }

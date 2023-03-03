@@ -25,8 +25,9 @@ class Mailer extends Injectable
 
     /**
      * Send welcome message to joined user
-     *
-     * @param Users $user
+     * @param string $email
+     * @param string $username
+     * @param string $token
      * @return null
      */
     public function confirmEmail(string $email, string $username, string $token)
@@ -38,17 +39,17 @@ class Mailer extends Injectable
 
         $html = $this->renderView('confirmEmail', $params);
         $txt = "Hi, $username!" . PHP_EOL . PHP_EOL;
-        $txt .= 'Your account was created on EzVideo. To verify your e-mail address, click on the button bellow.' . PHP_EOL . PHP_EOL;
+        $txt .= 'Your account was created on DevBook. To verify your e-mail address, click on the button bellow.' . PHP_EOL . PHP_EOL;
         $txt .= $this->config->application->publicUrl . $params['confirmUrl'] . PHP_EOL . PHP_EOL;
-        $txt .= "If you didn't create a EzVideo account, let us know at support@ezvideo.net." . PHP_EOL;
-        $txt .= 'Sincerely yours, EzVideo Team' . PHP_EOL . PHP_EOL;
-        $txt .= 'Sent with love from EzVideo' . PHP_EOL;
+        $txt .= "If you didn't create a EzVideo account, let us know at support@devbook.net." . PHP_EOL;
+        $txt .= 'Sincerely yours, DevBook Team' . PHP_EOL . PHP_EOL;
+        $txt .= 'Sent with love from DevBook' . PHP_EOL;
         $txt .= 'Copyright ' . date('Y') . '. All rights reserved.';
 
         $this->mailer->setFrom($this->config->mail->noreplyEmail, $this->config->mail->noreplyName);
         $this->mailer->addAddress($email, $username);
         $this->mailer->isHTML();
-        $this->mailer->Subject = 'Welcome to ezvideo!';
+        $this->mailer->Subject = 'Welcome to DevBook!';
         $this->mailer->Body = $html;
         $this->mailer->AltBody = $txt;
 
@@ -190,7 +191,7 @@ class Mailer extends Injectable
      *
      * @return string
      */
-    protected function renderView($viewPath, $params, $viewsDir = null) : string
+    protected function renderView($viewPath, $params, $viewsDir = null): string
     {
         $view = $this->getView();
 
@@ -218,7 +219,7 @@ class Mailer extends Injectable
      *
      * @return \Phalcon\Mvc\View\Simple
      */
-    protected function getView() : Simple
+    protected function getView(): Simple
     {
         if (!$this->view) {
             /** @var $view \Phalcon\Mvc\View\Simple */

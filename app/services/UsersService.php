@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\HttpExceptions\Http403Exception;
 use App\Exceptions\ServiceException;
+use App\Lib\Helper;
 use App\Models\Avatars;
+use App\Models\EmailConfirmations;
 use App\Models\Users;
 use Intervention\Image\ImageManager;
 
@@ -22,68 +25,44 @@ class UsersService extends AbstractService
      */
     public function create(array $data)
     {
-        // Get uploaded file
-        $file = $_FILES;
-        // Connecting with Users models
-        $user = new Users();
-        // Insert data in database
-        $user->assign($data);
-        // Save data in db
-        $isCreated = $user->create();
+        try {
+            // Start a transaction
+            $this->db->begin();
+            // Get uploaded file
+            $file = $_FILES;
+            // Connecting with Users models
+            $user = new Users();
+            // Insert data in database
+            $user->assign($data);
+            // Save data in db
+            $isCreated = $user->create();
 
-        if ($isCreated !== true) {
-            throw  new ServiceException(
-                'Unable to create user',
-                self::ERROR_NOT_EXISTS
-            );
-        }
-        // Generate name
-        $file['file']['name'] = time();
-        // Get type as string
-        $types = $this->getTypeToString($file['file']['type']);
-        // Def folders
-        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
-        (string)$timeFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/';
-        // If exist time folder  created
-        if (!is_dir($timeFolder)) {
-            mkdir($timeFolder, 0755, true);
-        }
-        // Move from temp to uploaded folder
-        $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
-        // Can`t upload image
-        if ($uploaded === false) {
-            throw  new ServiceException(
-                "Unable to upload image",
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
-        (string)$path = $this->config->application->domain . '/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
-        // Call Avatar model
-        $avatar = new Avatars();
-        $avatar->assign($file['file']);
-        $avatar->type = $types;
-        $avatar->user_id = $user->id;
-        $avatar->path = $path;
-        $avatar->name = $file['file']['name'] . "." . $types;
-        $result = $avatar->create();
-        // If not created
-        if (!$result) {
-            throw new ServiceException(
-                'Unable to create avatar',
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
+            if ($isCreated !== true) {
+                throw new ServiceException(
+                    'Unable to create user',
+                    self::ERROR_NOT_EXISTS
+                );
+            }
+            // Uploaded avatar
+            $this->uploadAvatarFile($user->id, $file);
 
-        // Resize image to 320x240
-        $manager = new ImageManager(['driver' => 'imagick']);
-        $image = $manager->make($uploadFolder);
-        $image->resize(320, 240);
+            $confirmToken = Helper::generateToken();
 
-        // Remove origin image
-        $isRemoveImage = unlink($uploadFolder);
-        // If all gone save to uploaded folder
-        if ($isRemoveImage === true) {
-            $image->save($uploadFolder);
+            $email = new EmailConfirmations();
+            $email->user_id = $user->id;
+            $email->token = $confirmToken;
+            $email->user_agent = $this->request->getUserAgent();
+            $email->ip_address = $this->request->getClientAddress();
+            $email->create();
+
+            // Commit the transaction
+            $this->db->commit();
+
+            $this->mailer->confirmEmail($user->email, $user->username, $confirmToken);
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw new Http403Exception($e->getMessage(), self::ERROR_BAD_TOKEN, $e);
         }
 
         return null;
@@ -101,14 +80,17 @@ class UsersService extends AbstractService
         $result = [];
         $jwt = $this->authService->getJwtToken();
         $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+        date_default_timezone_set('Europe/Sofia');
         $currentHour = date('H');
 
-        if ($currentHour < 12) {
-            $result['greeting'] ='Good morning';
-        } elseif ($currentHour < 18) {
-            $result['greeting'] = 'Good afternoon';
+        if ($currentHour >= 0 && $currentHour < 12) {
+            $result['greeting'] = ("Good Morning!");
+        } else if ($currentHour == 12) {
+            $result['greeting'] = ("Good Noon!");
+        } else if ($currentHour >= 12 && $currentHour <= 17) {
+            $result['greeting'] = ("Good Afternoon!");
         } else {
-            $result['greeting'] = 'Good evening';
+            $result['greeting'] = ("Good Evening!");
         }
 
         if ($userId !== $loggedId) {
@@ -182,7 +164,7 @@ class UsersService extends AbstractService
 
             default :
                 if (in_array($type, $supportTypes) === false) {
-                    throw  new ServiceException(
+                    throw new ServiceException(
                         "This format is not supported",
                         self::ERROR_FORMAT_IS_NOT_SUPPORT
                     );
@@ -191,6 +173,67 @@ class UsersService extends AbstractService
         };
 
         return $fileType;
+    }
+
+    /**
+     * uploadAvatarFile
+     * @param int | null $userId
+     * @param array $file
+     * @retrun null
+     */
+
+    private function uploadAvatarFile(int|null $userId = null, array $file): void
+    {
+        $file['file']['name'] = time();
+        $types = $this->getTypeToString($file['file']['type']);
+        (string)$path = $this->config->application->domain . '/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
+        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
+        (string)$timeFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/';
+
+        // If exist time folder  created
+        if (!is_dir($timeFolder)) {
+            mkdir($timeFolder, 0755, true);
+        }
+
+        // Call Avatar model
+        $avatar = new Avatars();
+        $avatar->assign($file['file']);
+        $avatar->type = $types;
+        $avatar->user_id = $userId;
+        $avatar->path = $path;
+        $avatar->name = $file['file']['name'] . "." . $types;
+        $result = $avatar->create();
+        // If not created
+        if (!$result) {
+            throw new ServiceException(
+                'Unable to create avatar',
+                self::ERROR_UNABLE_TO_CREATE
+            );
+        }
+
+        // Move from temp to uploaded folder
+        $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
+        // Can`t upload image
+        if ($uploaded === false) {
+            throw new ServiceException(
+                "Unable to upload image",
+                self::ERROR_UNABLE_TO_CREATE
+            );
+        }
+
+        // Resize image to 320x240
+        $manager = new ImageManager(['driver' => 'imagick']);
+        $image = $manager->make($uploadFolder);
+        $image->resize(320, 240);
+
+        // Remove origin image
+        $isRemoveImage = unlink($uploadFolder);
+
+        // If all gone save to uploaded folder
+        if ($isRemoveImage === true) {
+            $image->save($uploadFolder);
+        }
+
     }
 
 }

@@ -20,7 +20,8 @@ return new \Phalcon\Config\Config(
             'logsDir' => BASE_PATH . '/tmp/logs/',
             'baseUri' => "/",
             'domain' => getenv('DOMAIN'),
-            'publicUrl' => "https://" . getenv("DOMAIN"),
+            'publicUrl' => "http://" . getenv("DOMAIN"),
+            'mediaUrl' => "http://devbook.test/images/tools/",
         ],
         'mail' => [
             'noreplyEmail' => getenv('NOREPLY_EMAIL'),
@@ -36,6 +37,7 @@ return new \Phalcon\Config\Config(
                 '/signup:POST',
                 '/login:POST',
                 '/forgotPassword:POST',
+                '/email-confirmations:POST',
             ]
         ],
     ]

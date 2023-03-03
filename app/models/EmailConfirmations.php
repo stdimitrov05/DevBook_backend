@@ -77,12 +77,6 @@ class EmailConfirmations extends Model
         $this->created_at = time();
     }
 
-    /**
-     * Send a confirmation e-mail to the user after create the account
-     */
-    public function afterCreate()
-    {
-//        $this->mailer->confirmEmailMessage($this->token, $this->user);
-    }
+
 
 }
