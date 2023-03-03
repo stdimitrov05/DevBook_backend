@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
+
 /**
  * Class AbstractService
  *
  * @property \Phalcon\Db\Adapter\Pdo\Mysql $db
  * @property \Phalcon\Config\Config $config
+ * @property AuthService $authService
+ * @property UsersService $usersService
  */
 abstract class AbstractService extends \Phalcon\DI\Injectable
 {
@@ -19,38 +22,30 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
      * Record already exists
      */
     const ERROR_ALREADY_EXISTS = 10020;
+    const ERROR_NOT_EXISTS = 10030;
+
+    // Record is not found
+    const  ERROR_IS_NOT_FOUND = 10040;
+
+    // Record is can`t created
+    const  ERROR_UNABLE_TO_CREATE = 10050;
+    const  ERROR_BAD_TOKEN = 10060;
     const ERROR_USER_NOT_AUTHORIZED = 11020;
 
-    /**
-     * User errors
-     */
-    const ERROR_UNABLE_CREATE_USER = 11001;
-    const ERROR_USER_NOT_FOUND = 11002;
-     const ERROR_UNABLE_UPDATE_USER = 11004;
-    const ERROR_PASSWORD_NOT_FOUND = 11006;
-    const ERROR_PASSWORD_INCORRECT = 11007;
-    const ERROR_PASSWORD_NOT_MATCH = 11008;
+    // Redis errors
+    const ERROR_REDIS_NOT_SET_DATA = 11030;
 
-    /*
-     * Email confirmation errors
-     */
-    const ERROR_CONFIRMATION_TOKEN_NOT_EXIST = 11010;
-    const ERROR_CONFIRMATION_TOKEN_EXPIRED = 11011;
-    const ERROR_CONFIRMATION_CONFIRMED = 11012;
+//    Users errors
+    const ERROR_USER_NOT_ACTIVE = 12010;
+    const ERROR_WRONG_EMAIL_OR_PASSWORD = 12020;
 
-    /*
-     * Auth errors
-     */
-    const ERROR_WRONG_EMAIL_OR_PASSWORD = 13001;
-    const ERROR_USER_NOT_ACTIVE = 13002;
-    const ERROR_USER_BANNED = 13003;
-    const ERROR_USER_SUSPENDED = 13004;
-    const ERROR_USER_HAS_DELETED = 13010;
-    const ERROR_MISSING_TOKEN = 13005;
-    const ERROR_EXPIRED_TOKEN = 13006;
-    const ERROR_BAD_TOKEN = 13008;
-    const ERROR_EMAIL_NOT_EXIST = 13009;
-    const ERROR_RESET_TOKEN_NOT_EXIST = 13020;
-    const ERROR_RESET_TOKEN_EXPIRED = 13021;
+    // JWT errors
+    const ERROR_JWT_IN_WHITE_LIST = 13000;
+    const ERROR_JWT_IS_NOT_FOUND = 13010;
+    const ERROR_HAS_EXPIRED = 13020;
+    const ERROR_JWT_CANT_REMOVE = 13030;
+
+    // Avatar
+    const ERROR_FORMAT_IS_NOT_SUPPORT = 14000;
 
 }

@@ -1,5 +1,4 @@
 <?php
-
 return new \Phalcon\Config\Config(
     [
         'database' => [
@@ -12,13 +11,17 @@ return new \Phalcon\Config\Config(
             'collation' => getenv('DATABASE_COLLATION')
         ],
         'application' => [
-            'controllersDir' => "app/controllers/",
-            'modelsDir' => "app/models/",
+            'logInDb' => true,
+            'migrationsDir' => APP_PATH.'/migrations',
+            'migrationsTsBased' => true,
+            'controllersDir' =>APP_PATH. "/controllers/",
+            'modelsDir' => APP_PATH. "/models/",
             'emailsDir' => APP_PATH . '/views/emails/',
             'logsDir' => BASE_PATH . '/tmp/logs/',
             'baseUri' => "/",
             'domain' => getenv('DOMAIN'),
-            'publicUrl' => "https://" . getenv("DOMAIN"),
+            'publicUrl' => "http://" . getenv("DOMAIN"),
+            'mediaUrl' => "http://devbook.test/images/tools/",
         ],
         'mail' => [
             'noreplyEmail' => getenv('NOREPLY_EMAIL'),
@@ -31,6 +34,10 @@ return new \Phalcon\Config\Config(
             'refreshTokenRememberExpire' => getenv('JWT_REFRESH_TOKEN_REMEMBER_EXPIRE'),
             'ignoreUri' => [
                 '/',
+                '/signup:POST',
+                '/login:POST',
+                '/forgotPassword:POST',
+                '/email-confirmations:POST',
             ]
         ],
     ]

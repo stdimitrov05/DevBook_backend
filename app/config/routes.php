@@ -15,6 +15,61 @@ $frontendCollection->get(
 
 $app->mount($frontendCollection);
 
+/*============================
+Users
+=============================*/
+
+$frontendCollection = new \Phalcon\Mvc\Micro\Collection();
+$frontendCollection->setPrefix(API_VERSION . '/users');
+$frontendCollection->setHandler('\App\Controllers\UsersController', true);
+
+// User Details for home page
+$frontendCollection->get(
+    '/{userId:[1-9][0-9]*}/details',
+    'userDetailsAction'
+);
+
+$app->mount($frontendCollection);
+
+/*============================
+Authentication
+=============================*/
+
+$authCollection = new \Phalcon\Mvc\Micro\Collection();
+$authCollection->setPrefix(API_VERSION);
+$authCollection->setHandler('\App\Controllers\AuthController', true);
+
+// Signup
+$authCollection->post(
+    '/signup',
+    'signupAction'
+);
+// Login
+$authCollection->post(
+    '/login',
+    'loginAction'
+);
+
+// Refresh tokens
+$authCollection->get(
+    '/refresh/tokens',
+    'refreshJWTAction'
+);
+
+// Forgot Password
+$authCollection->post(
+    '/forgotPassword',
+    'forgotPasswordAction'
+);
+
+// Confirm email
+$authCollection->post(
+    '/email-confirmations',
+    'emailConfirmAction'
+);
+
+$app->mount($authCollection);
+
 
 // Not found URLs
 $app->notFound(

@@ -7,11 +7,14 @@ use App\Exceptions\HttpExceptions\Http400Exception;
 /**
  * Class AbstractController
  *
- * @property \Phalcon\Http\Request              $request
- * @property \Phalcon\Http\Response             $htmlResponse
- * @property \Phalcon\Db\Adapter\Pdo\Mysql      $db
- * @property \Phalcon\Config                     $config
- * @property \App\Services\FrontendService      $frontendService
+ * @property \Phalcon\Http\Request $request
+ * @property \Phalcon\Http\Response $htmlResponse
+ * @property \Phalcon\Db\Adapter\Pdo\Mysql $db
+ * @property \Phalcon\Config $config
+ * @property \App\Services\FrontendService $frontendService
+ * @property \App\Services\AuthService $authService
+ * @property \App\Services\UsersService $usersService
+ *
  */
 abstract class AbstractController extends \Phalcon\DI\Injectable
 {

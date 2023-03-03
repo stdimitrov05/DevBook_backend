@@ -1,5 +1,9 @@
 {
     "require": {
-        "phpmailer/phpmailer": "^6.6"
+        "phpmailer/phpmailer": "v6.7.1",
+        "intervention/image": "^2.7"
+    },
+    "require-dev": {
+        "phalcon/migrations": "^3.0"
     }
 }

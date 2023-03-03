@@ -5,3 +5,4 @@ tmp
 composer.lock
 .DS_Store
 .env
+public/images
