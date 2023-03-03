@@ -62,10 +62,23 @@ $authCollection->post(
     'forgotPasswordAction'
 );
 
+// Change password after send forgotPassword email
+$authCollection->post(
+    '/check/forgotPassword/token',
+    'checkRestPasswordTokenAction'
+);
+
+
 // Confirm email
 $authCollection->post(
-    '/email-confirmations',
+    '/users/email/confirm',
     'emailConfirmAction'
+);
+
+// Resend confirm email
+$authCollection->post(
+    '/users/resend/email/confirm',
+    'resendEmailConfirmAction'
 );
 
 $app->mount($authCollection);

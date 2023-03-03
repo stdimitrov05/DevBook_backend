@@ -38,6 +38,7 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
 //    Users errors
     const ERROR_USER_NOT_ACTIVE = 12010;
     const ERROR_WRONG_EMAIL_OR_PASSWORD = 12020;
+    const ERROR_TOKEN_HAS_CONFIRMED = 12030;
 
     // JWT errors
     const ERROR_JWT_IN_WHITE_LIST = 13000;

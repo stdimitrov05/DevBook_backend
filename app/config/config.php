@@ -37,7 +37,9 @@ return new \Phalcon\Config\Config(
                 '/signup:POST',
                 '/login:POST',
                 '/forgotPassword:POST',
-                '/email-confirmations:POST',
+                '/check/forgotPassword/token:POST',
+                '/users/email/confirm:POST',
+                '/users/resend/email/confirm:POST',
             ]
         ],
     ]

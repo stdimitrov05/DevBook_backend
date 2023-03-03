@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\HttpExceptions\Http403Exception;
 use App\Exceptions\ServiceException;
 use App\Lib\Helper;
+use App\Models\EmailConfirmations;
+use App\Models\ForgotPassword;
 use App\Models\LoginsFailed;
 use App\Models\Users;
 use Phalcon\Db\Column;
@@ -182,30 +185,41 @@ class AuthService extends AbstractService
     /**
      * forgotPassword
      * @param string $email
-     * @retrun array
+     * @retrun null
      */
-    public function forgotPassword(string $email): array
+    public function forgotPassword(string $email)
     {
-        $this->db->begin();
+        $clientIpAddress = $this->request->getClientAddress();
+        $userAgent = $this->request->getUserAgent();
+
         // Check email
         $user = Users::findFirstByEmail($email);
 
-        if (!$user) {
-            throw  new ServiceException(
-                "Sending email...",
-                self::ERROR_IS_NOT_FOUND
-            );
+        if ($user) {
+            // Check user flags
+            $this->checkUserFlags($user);
+
+            // Generate confirmToken
+            $confirmToken = Helper::generateToken();
+
+            $forgotPassword = new ForgotPassword();
+            $forgotPassword->user_id = $user->id;
+            $forgotPassword->token = $confirmToken;
+            $forgotPassword->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
+            $forgotPassword->user_agent = empty($userAgent) ? null : substr($userAgent, 0, 250);
+            $created = $forgotPassword->create();
+
+            if (!$created) {
+                throw  new ServiceException(
+                    "Unable to create token",
+                    self::ERROR_UNABLE_TO_CREATE
+                );
+            }
+
+            // Send email forgot password >>>
         }
 
-        // Check user flags
-        $this->checkUserFlags($user);
-
-        // Generate confirmToken
-        $confirmToken  = Helper::generateToken();
-
-
-
-        var_dump($confirmToken);die;
+        return null;
     }
 
 
@@ -438,14 +452,119 @@ class AuthService extends AbstractService
     }
 
     /**
-    * emailConfirm
-     * @param string $param
+     * emailConfirm
+     * @param string $token
      * @return  array
      */
-    public function emailConfirm(string $param) : array
+    public function emailConfirm(string $token): array
     {
+        // Start a transaction
+        $this->db->begin();
+
+        try {
+            // Found current token
+            $email = EmailConfirmations::findFirstByToken($token);
+            // Check
+            if (!$email) {
+                throw  new ServiceException(
+                    "Token is not found",
+                    self::ERROR_IS_NOT_FOUND
+                );
+            } elseif ($email->confirmed === 1) {
+                throw  new ServiceException(
+                    "Token is confirmed",
+                    self::ERROR_TOKEN_HAS_CONFIRMED
+                );
+            }
+            // Update current token as confirmed
+            $email->confirmed = 1;
+            $email->update();
+            // Update in users table column activate
+            $user = Users::findFirst([
+                'conditions' => 'id = :id:',
+                'bind' => ['id' => $email->user_id]
+            ]);
+
+            $user->active = 1;
+            $user->update();
+
+            // Generate jwt tokens for 1 w
+            $jwtTokens = $this->generateJwtTokens($user->id);
+
+            $this->db->commit();
+
+            return [
+                "accessToken" => $jwtTokens['accessToken'],
+                "refreshToken" => $jwtTokens['refreshToken']
+            ];
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw new Http403Exception($e->getMessage(), self::ERROR_BAD_TOKEN, $e);
+        }
+
+    }
+
+    /**
+     * resendEmailConfrim
+     * @param string $token
+     * @retrun  null
+     */
+    public function resendEmailConfirm(string $token)
+    {
+        // Get userId form confirm token
+        $email = EmailConfirmations::findFirst([
+            'conditions' => 'token = :token:',
+            'bind' => ['token' => $token]
+        ]);
+
+        if (!$email) {
+            throw  new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+        // Get user data
+        $user = Users::findFirst([
+            'conditions' => 'id = :userId:',
+            'bind' => ['userId' => $email->user_id]
+        ]);
+
+        if (!$user) {
+            throw  new ServiceException(
+                "User email is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
+        // Generate new confirmToken
+        $confirmToken = Helper::generateToken();
+        // Send new email with new confrim token
+        $this->mailer->confirmEmail($user->email, $user->username, $confirmToken);
+
+        return null;
+    }
 
 
+    /**
+     * checkResetToken
+     * @param string $token
+     * @retrun  array
+     */
+    public function checkResetToken(string $token) : array
+    {
+        $resetToken = ForgotPassword::findFirstByToken($token);
+
+        if (!$resetToken) {
+            throw  new ServiceException(
+                "Invalid reset token",
+                self::ERROR_BAD_TOKEN
+            );
+        }
+
+        return  [
+            "token" => $resetToken->token
+        ];
     }
 
 
