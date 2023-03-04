@@ -23,8 +23,6 @@ class EmailConfirmValidation extends Validation
                 ])
             ]
         );
-
-
     }
 
 }

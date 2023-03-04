@@ -7,6 +7,7 @@ use App\Exceptions\HttpExceptions\Http422Exception;
 use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
+use App\Validation\ChangeFrogotPasswordValidation;
 use App\Validation\EmailConfirmValidation;
 use App\Validation\ForgotPasswordValidation;
 use App\Validation\LoginValidation;
@@ -226,7 +227,7 @@ class AuthController extends AbstractController
      * checkRestPasswordTokenAction
      * @retrun array
      */
-    public function checkRestPasswordTokenAction()  : array
+    public function checkRestPasswordTokenAction(): array
     {
         $resetToken = $this->request->getPost();
 
@@ -244,6 +245,7 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_BAD_TOKEN,
+                AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
@@ -251,6 +253,44 @@ class AuthController extends AbstractController
         }
 
         return $response;
+    }
 
+    /**
+     * changeForgotPasswordAction
+     * @retrun array
+     */
+
+    public function changeForgotPasswordAction()
+    {
+        $data = [];
+
+        // Collect and trim request params
+        foreach ($this->request->getPost() as $key => $value) {
+            $data[$key] = $this->request->getPost($key, ['string', 'trim']);
+        }
+
+        // Start validation
+        $validation = new ChangeFrogotPasswordValidation();
+        $messages = $validation->validate($data);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->authService->changeForgotPassword((array)$data);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_NOT_EXISTS,
+                AbstractService::ERROR_WRONG_PASSWORD,
+                AbstractService::ERROR_UNABLE_TO_UPDATE,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
     }
 }

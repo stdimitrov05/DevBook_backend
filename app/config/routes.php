@@ -58,16 +58,21 @@ $authCollection->get(
 
 // Forgot Password
 $authCollection->post(
-    '/forgotPassword',
+    '/forgot-password',
     'forgotPasswordAction'
 );
 
 // Change password after send forgotPassword email
 $authCollection->post(
-    '/check/forgotPassword/token',
+    '/check/forgot-password/token',
     'checkRestPasswordTokenAction'
 );
 
+// Change password from reset link
+$authCollection->post(
+    '/forgot-password/change-password',
+    'changeForgotPasswordAction'
+);
 
 // Confirm email
 $authCollection->post(

@@ -30,6 +30,7 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     // Record is can`t created
     const  ERROR_UNABLE_TO_CREATE = 10050;
     const  ERROR_BAD_TOKEN = 10060;
+    const  ERROR_UNABLE_TO_UPDATE= 10070;
     const ERROR_USER_NOT_AUTHORIZED = 11020;
 
     // Redis errors
@@ -38,7 +39,8 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
 //    Users errors
     const ERROR_USER_NOT_ACTIVE = 12010;
     const ERROR_WRONG_EMAIL_OR_PASSWORD = 12020;
-    const ERROR_TOKEN_HAS_CONFIRMED = 12030;
+    const ERROR_WRONG_PASSWORD = 12030;
+    const ERROR_TOKEN_HAS_CONFIRMED = 12040;
 
     // JWT errors
     const ERROR_JWT_IN_WHITE_LIST = 13000;

@@ -551,7 +551,7 @@ class AuthService extends AbstractService
      * @param string $token
      * @retrun  array
      */
-    public function checkResetToken(string $token) : array
+    public function checkResetToken(string $token): array
     {
         $resetToken = ForgotPassword::findFirstByToken($token);
 
@@ -560,11 +560,69 @@ class AuthService extends AbstractService
                 "Invalid reset token",
                 self::ERROR_BAD_TOKEN
             );
+        } elseif ($resetToken->confirmed === 1) {
+            throw  new ServiceException(
+                "Token is confirmed",
+                self::ERROR_TOKEN_HAS_CONFIRMED
+            );
         }
 
-        return  [
+        return [
             "token" => $resetToken->token
         ];
+    }
+
+    /**
+     * changeForgotPassword
+     * @param array $data
+     * @return  null
+     */
+    public function changeForgotPassword(array $data)
+    {
+        $userId = ForgotPassword::findFirstByToken($data['token'])->user->id;
+
+        if (!$userId) {
+            throw new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+        $user = Users::findFirst([
+            'conditions' => 'id = :id:',
+            'bind' => ['id' => $userId]
+        ]);
+
+        // Check the password
+        if (!$this->security->checkHash($data['oldPassword'], $user->password)) {
+            throw new ServiceException(
+                'Wrong old password',
+                self::ERROR_WRONG_PASSWORD
+            );
+        }
+
+        // The two passwords do not match
+        if ($data['newPassword'] !== $data['currentPassword']) {
+            throw new ServiceException(
+                'The two passwords do not match',
+                self::ERROR_WRONG_PASSWORD
+            );
+        }
+
+        // Hash new password
+        $hashPassword = $this->getDI()->getSecurity()->hash($data['newPassword']);
+
+        // Update user password
+        $user->password = $hashPassword;
+        $isUpdate = $user->update();
+
+        if ($isUpdate !== true) {
+            throw  new ServiceException(
+                "Unable to update",
+                self::ERROR_UNABLE_TO_UPDATE
+            );
+        }
+        return null;
+
     }
 
 

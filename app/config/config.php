@@ -40,6 +40,7 @@ return new \Phalcon\Config\Config(
                 '/check/forgotPassword/token:POST',
                 '/users/email/confirm:POST',
                 '/users/resend/email/confirm:POST',
+                '/forgot-password/change-password:POST',
             ]
         ],
     ]
