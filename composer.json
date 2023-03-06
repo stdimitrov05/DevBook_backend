@@ -1,9 +1,12 @@
 {
-    "require": {
-        "phpmailer/phpmailer": "v6.7.1",
-        "intervention/image": "^2.7"
-    },
-    "require-dev": {
-        "phalcon/migrations": "^3.0"
+  "require": {
+    "phpmailer/phpmailer": "v6.7.1",
+    "intervention/image": "^2.7",
+    "elasticsearch/elasticsearch": "^8.6"
+  },
+  "config": {
+    "allow-plugins": {
+      "php-http/discovery": false
     }
+  }
 }

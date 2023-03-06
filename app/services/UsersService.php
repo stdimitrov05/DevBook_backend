@@ -43,6 +43,21 @@ class UsersService extends AbstractService
                     self::ERROR_NOT_EXISTS
                 );
             }
+
+            $userData = [
+                'id'=>$user->id,
+                'username'=>$user->username,
+                'email'=>$user->email,
+                'password'=>$user->password,
+                'balance'=>$user->balance,
+                'active'=>$user->active,
+                'created_at'=>$user->created_at,
+                'deleted_at'=>$user->deleted_at,
+
+            ];
+            // Insert in elasticsearch
+            $this->elastic->insertUserData($userData);
+
             // Uploaded avatar
             $this->uploadAvatarFile($user->id, $file);
 
@@ -57,6 +72,7 @@ class UsersService extends AbstractService
 
             // Commit the transaction
             $this->db->commit();
+
 
             $this->mailer->confirmEmail($user->email, $user->username, $confirmToken);
 
@@ -210,7 +226,16 @@ class UsersService extends AbstractService
                 self::ERROR_UNABLE_TO_CREATE
             );
         }
+        $avatar = [
+            'id'=>$avatar->id,
+            'user_id'=>$avatar->user_id,
+            'name'=>$avatar->name,
+            'type'=>$avatar->type,
+            'size'=>$avatar->size,
+            'path'=>$avatar->path,
+        ];
 
+        // Insert
         // Move from temp to uploaded folder
         $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
         // Can`t upload image

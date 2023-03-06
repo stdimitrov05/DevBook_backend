@@ -5,10 +5,6 @@ use Phalcon\DI\DI;
 use Phalcon\Logger\Logger;
 use Phalcon\Logger\Adapter\Stream;
 use Phalcon\Session\Adapter\Redis;
-use Phalcon\Session\Manager;
-use Phalcon\Storage\AdapterFactory;
-use Phalcon\Storage\SerializerFactory;
-
 
 // Initializing a DI Container
 $di = new DI();
@@ -41,7 +37,6 @@ $di->setShared('filter', function () {
 });
 
 
-
 /** Register security service */
 $di->setShared('security', new Phalcon\Encryption\Security());
 
@@ -52,7 +47,7 @@ $di->setShared('security', new Phalcon\Encryption\Security());
 // Redis service
 $di->setShared('redis', function () use ($config) {
     $redis = new \Redis();
-    $redis->connect(getenv('REDIS_HOST'),getenv('REDIS_PORT'));
+    $redis->connect(getenv('REDIS_HOST'), getenv('REDIS_PORT'));
     return $redis;
 });
 
@@ -69,6 +64,14 @@ $di->setShared('mailer', function () use ($config) {
     $phpMailer->Password = getenv("NOREPLY_PASSWORD");
 
     return new \App\Lib\Mailer($phpMailer);
+});
+
+/** Elasticsearch service */
+$di->setShared('elastic', function () use ($config) {
+    $elastic = \Elastic\Elasticsearch\ClientBuilder::create()
+        ->setHosts((array)'elasticsearch:9200')->build();
+
+    return new \App\Lib\Elastic($elastic);
 });
 
 $di->set(

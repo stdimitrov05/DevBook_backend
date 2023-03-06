@@ -31,6 +31,7 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     const  ERROR_UNABLE_TO_CREATE = 10050;
     const  ERROR_BAD_TOKEN = 10060;
     const  ERROR_UNABLE_TO_UPDATE= 10070;
+    const  ERROR_UNABLE_TO_INSERT= 10080;
     const ERROR_USER_NOT_AUTHORIZED = 11020;
 
     // Redis errors

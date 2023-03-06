@@ -89,6 +89,29 @@ $authCollection->post(
 $app->mount($authCollection);
 
 
+/*============================
+Develop
+=============================*/
+
+$devCollection = new \Phalcon\Mvc\Micro\Collection();
+$devCollection->setPrefix(API_VERSION);
+$devCollection->setHandler('\App\Controllers\DevController', true);
+
+// Create users index
+$devCollection->post(
+    '/elastic/users/index',
+    'createUsersAction'
+);
+
+// Create avatars index
+$devCollection->post(
+    '/elastic/avatars/index',
+    'createAvatarsAction'
+);
+
+
+$app->mount($devCollection);
+
 // Not found URLs
 $app->notFound(
     function () use ($app) {
