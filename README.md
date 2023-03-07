@@ -34,5 +34,5 @@
 >mageMagick, invoked from the command line as magick, is a free and open-source cross-platform software suite for displaying, creating, converting, modifying, and editing raster images.
 
 
-### This was a project I worked on back in March of 2023. 
+### This was a project I worked on back in Feb of 2023. 
 
