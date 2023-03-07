@@ -56,6 +56,7 @@ class AuthService extends AbstractService
             ]
         );
 
+
         // If user is not found
         if (!$user) {
             $this->registerUserThrottling(0);
@@ -74,14 +75,6 @@ class AuthService extends AbstractService
             );
         }
 
-        // If user profile has deleted
-        if (!empty($user->deleted_at)) {
-            $this->registerUserThrottling(0);
-            throw new ServiceException(
-                'Wrong email or password',
-                self::ERROR_WRONG_EMAIL_OR_PASSWORD
-            );
-        }
 
         // Check if the user was flagged
         $this->checkUserFlags($user);
@@ -441,14 +434,22 @@ class AuthService extends AbstractService
      * @param \App\Models\Users $user
      * @throws ServiceException
      */
-    private function checkUserFlags(Users $user)
+    public function checkUserFlags(Users $user)
     {
+        if ($user->deleted_at != null) {
+            throw new ServiceException(
+                'The user is deleted',
+                self::ERROR_ACCOUNT_IS_DELETED
+            );
+        }
+
         if ($user->active != 1) {
             throw new ServiceException(
                 'The user is inactive',
                 self::ERROR_USER_NOT_ACTIVE
             );
         }
+
     }
 
     /**
@@ -488,8 +489,11 @@ class AuthService extends AbstractService
             $user->active = 1;
             $user->update();
 
+            // Update activate in elastic
+            $this->elastic->updateUserActivateById($user->id);
             // Generate jwt tokens for 1 w
             $jwtTokens = $this->generateJwtTokens($user->id);
+
 
             $this->db->commit();
 

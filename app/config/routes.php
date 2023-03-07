@@ -19,17 +19,23 @@ $app->mount($frontendCollection);
 Users
 =============================*/
 
-$frontendCollection = new \Phalcon\Mvc\Micro\Collection();
-$frontendCollection->setPrefix(API_VERSION . '/users');
-$frontendCollection->setHandler('\App\Controllers\UsersController', true);
+$userCollection = new \Phalcon\Mvc\Micro\Collection();
+$userCollection->setPrefix(API_VERSION . '/users');
+$userCollection->setHandler('\App\Controllers\UsersController', true);
 
 // User Details for home page
-$frontendCollection->get(
+$userCollection->get(
     '/{userId:[1-9][0-9]*}/details',
     'userDetailsAction'
 );
 
-$app->mount($frontendCollection);
+// Delete account
+$userCollection->delete(
+    '/{userId:[1-9][0-9]*}/delete',
+    'deleteAction'
+);
+
+$app->mount($userCollection);
 
 /*============================
 Authentication

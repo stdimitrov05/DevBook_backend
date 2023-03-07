@@ -98,6 +98,58 @@ class Elastic extends AbstractService
     }
 
     /**
+     * updateUserActivateById
+     * @param int $userId
+     * @retrun  null
+     * */
+
+    public function updateUserActivateById(int $userId)
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'type' => 'user',
+            'id' => $userId, // Replace with the user ID you want to update
+            'body' => [
+                'doc' => [
+                    'active' => 1 // Replace with the new value you want to set
+                ]
+            ]
+        ];
+
+        $this->elasticsearch->update($requestBody);
+    }
+
+    /**
+     * deleteUserById
+     * @param int $userId
+     * @return  bool
+     * */
+
+    public function deleteUserById(int $userId): bool
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'type' => 'user',
+            'id' => $userId
+        ];
+
+        $response = $this->elasticsearch->delete($requestBody);
+        // Get the response body as a string
+        $response_body = $response->getBody();
+
+        // Parse the response body as JSON
+        $search_results = json_decode($response_body, true);
+
+        return $search_results['_shards']['successful'] === 1 ? true : false;
+
+    }
+
+
+    /**
      * createAvatarIndex
      * @uses  \Elastic\Elasticsearch\ClientBuilder
      * @retrun  null
@@ -171,4 +223,69 @@ class Elastic extends AbstractService
         $this->elasticsearch->index($requestBody);
     }
 
+    /**
+     * getAvatarById
+     * @param int $userId
+     * @retrun  string | null
+     * */
+
+    public function getAvatarById(int $userId): string|null
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'avatars',
+            'body' => [
+                '_source' => false,
+                'query' => [
+                    'match' => [
+                        'user_id' => $userId // Replace with the user ID you want to get avatars for
+                    ]
+                ],
+                'fields' => ['path']
+            ]
+        ];
+
+        $response = $this->elasticsearch->search($requestBody);
+        $avatars = "";
+        foreach ($response['hits']['hits'] as $hit) {
+            $avatars = $hit['fields']['path'][0];
+        }
+
+        return !$avatars ? null : $avatars;
+    }
+
+    /**
+     * getUserData
+     * @param int $userId
+     * @retrun  array
+     * */
+
+    public function getUserData(int $userId): array
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'body' => [
+                '_source' => true,
+                'query' => [
+                    'match' => [
+                        '_id' => $userId // Replace with the user ID you want to get avatars for
+                    ]
+                ],
+                'fields' => ['*']
+            ]
+        ];
+
+        $response = $this->elasticsearch->search($requestBody);
+        $user = [];
+        foreach ($response['hits']['hits'] as $hit) {
+            $user['username'] = $hit['fields']['username'][0];
+            $user['balance'] = $hit['fields']['balance'][0];
+        }
+        $user['avatar'] = $this->getAvatarById($userId);
+
+        return !$user ? [] : $user;
+    }
 }

@@ -94,8 +94,23 @@ class UsersService extends AbstractService
     public function details(int $userId): array
     {
         $result = [];
-        $jwt = $this->authService->getJwtToken();
-        $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+        $loggedId = $this->getLoggedUser();
+
+        if ($userId !== $loggedId) {
+            throw  new ServiceException(
+                "User is not authorized",
+                self::ERROR_USER_NOT_AUTHORIZED
+            );
+        }
+
+        $user =  Users::findFirstById($loggedId);
+        if (!$user->id || $user->active !== 1) {
+            throw  new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
         date_default_timezone_set('Europe/Sofia');
         $currentHour = date('H');
 
@@ -109,6 +124,23 @@ class UsersService extends AbstractService
             $result['greeting'] = ("Good Evening!");
         }
 
+
+        // Get avatar
+        $result['user'] = $this->elastic->getUserData($loggedId);
+
+        return $result;
+    }
+
+    /**
+     * delete
+     * @param int $userId
+     * @retrun  null
+     * */
+
+    public function delete(int $userId)
+    {
+        $loggedId = $this->getLoggedUser();
+
         if ($userId !== $loggedId) {
             throw  new ServiceException(
                 "User is not authorized",
@@ -116,31 +148,75 @@ class UsersService extends AbstractService
             );
         }
 
-        $sql = "SELECT 
-                    u.username,
-                    u.balance,
-                    av.name,
-                    av.path
-                FROM users u
-                INNER JOIN avatars av ON av.user_id = u.id
-                WHERE u.id = :userId
-        ";
+        // Administrators check
+        //        if ($loggedId !== $adminId) {
+        //            throw  new ServiceException(
+        //                "User is not authorized",
+        //                self::ERROR_USER_NOT_AUTHORIZED
+        //            );
+        //        }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam('userId', $userId, \PDO::PARAM_INT);
-        $stmt->execute();
-        $result['userDetails'] = $stmt->fetchAll();
+        // Update data in database
+        $user = Users::findFirst([
+            'conditions' => 'id = :id:',
+            'bind' => ['id' => $userId]
+        ]);
 
-        if (!$result) {
-            throw new  ServiceException(
-                "Details is not found",
+        if (!$user) {
+            throw  new ServiceException(
+                "User is not found",
                 self::ERROR_IS_NOT_FOUND
             );
         }
 
-        return $result;
+        // Check user flags
+        $this->authService->checkUserFlags($user);
+
+        $user->active = 0;
+        $user->deleted_at = time();
+        $deleted = $user->update();
+
+        if ($deleted !== true) {
+            throw new ServiceException(
+                "Unable to update deleted_at",
+                self::ERROR_UNABLE_TO_UPDATE
+            );
+        }
+
+        // Clear in elastic
+        $isDeleted = $this->elastic->deleteUserById($userId);
+
+        if ($isDeleted !== true) {
+            throw  new ServiceException(
+                "Unable to delete account",
+                self::ERROR_UNABLE_TO_DELETE_ACCOUNT
+            );
+        }
+
+        // Clear in redis
+        $this->clearUserJtis($userId);
+
+        return null;
     }
 
+
+    /**
+     * clearUserJtis
+     * @param int $userId
+     * */
+    public function clearUserJtis(int $userId): void
+    {
+        // Get jtis from sets
+        $jtis = $this->redis->sMembers('users:' . $userId . ":jtis");
+
+        // Clear whitelist jtis
+        foreach ($jtis as $jti) {
+            $this->redis->del("wl_" . $jti);
+        }
+
+        // Delete sets
+        $this->redis->del("users:" . $userId . ":jtis");
+    }
 
     /**
      * Get from $_FILE  current type to string
@@ -227,15 +303,16 @@ class UsersService extends AbstractService
             );
         }
         $avatar = [
-            'id'=>$avatar->id,
-            'user_id'=>$avatar->user_id,
-            'name'=>$avatar->name,
-            'type'=>$avatar->type,
-            'size'=>$avatar->size,
-            'path'=>$avatar->path,
+            'id' => $avatar->id,
+            'user_id' => $avatar->user_id,
+            'name' => $avatar->name,
+            'type' => $avatar->type,
+            'size' => $avatar->size,
+            'path' => $avatar->path,
         ];
 
-        // Insert
+        // Insert avatar in elastic
+        $this->elastic->insertAvatarData($avatar);
         // Move from temp to uploaded folder
         $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
         // Can`t upload image
@@ -259,6 +336,19 @@ class UsersService extends AbstractService
             $image->save($uploadFolder);
         }
 
+    }
+
+    /**
+     * getLoggedUser
+     * @retrun integer
+     * */
+
+    private function getLoggedUser(): int
+    {
+        $jwt = $this->authService->getJwtToken();
+        $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+
+        return $loggedId;
     }
 
 }

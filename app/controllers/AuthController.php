@@ -88,6 +88,7 @@ class AuthController extends AbstractController
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 AbstractService::ERROR_REDIS_NOT_SET_DATA,
                 AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_ACCOUNT_IS_DELETED,
                 AbstractService::ERROR_WRONG_EMAIL_OR_PASSWORD,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -144,6 +145,7 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_ACCOUNT_IS_DELETED,
                 AbstractService::ERROR_IS_NOT_FOUND,
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),

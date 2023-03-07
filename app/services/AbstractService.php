@@ -3,6 +3,8 @@
 namespace App\Services;
 
 
+use App\Lib\Elastic;
+
 /**
  * Class AbstractService
  *
@@ -10,6 +12,8 @@ namespace App\Services;
  * @property \Phalcon\Config\Config $config
  * @property AuthService $authService
  * @property UsersService $usersService
+ * @property Elastic $elastic
+ * @property \Redis $redis
  */
 abstract class AbstractService extends \Phalcon\DI\Injectable
 {
@@ -42,6 +46,8 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     const ERROR_WRONG_EMAIL_OR_PASSWORD = 12020;
     const ERROR_WRONG_PASSWORD = 12030;
     const ERROR_TOKEN_HAS_CONFIRMED = 12040;
+    const ERROR_ACCOUNT_IS_DELETED = 12050;
+    const ERROR_UNABLE_TO_DELETE_ACCOUNT = 12060;
 
     // JWT errors
     const ERROR_JWT_IN_WHITE_LIST = 13000;
