@@ -1,10 +1,19 @@
-** DevBook backend **
+# DevBook Backend
 
- *Description*
+## *Description*
+ 
 >This is Api backend repositories, here have all business logic and math operations.
-> Fronted repositories :[DevBook fronted](https://github.com/stdimitrov05/devbook_fronted)
 
-*Used Technologies*
+>Fronted repositories: [DevBook fronted](https://github.com/stdimitrov05/devbook_fronted)
+
+## *Staf*
+ ### [Stdimitrov05](https://github.com/stdimitrov05/)
+>Backend Developer
+### [Simona03](https://github.com/Simona03)
+> Fronted Developer and UI Designer
+
+
+## *Used Technologies*
 * [PHP 8.1](https://www.php.net/)
 > PHP is a general-purpose scripting language geared toward web development.
 * [Phalcon](https://phalcon.io/en-us)
@@ -25,5 +34,5 @@
 >mageMagick, invoked from the command line as magick, is a free and open-source cross-platform software suite for displaying, creating, converting, modifying, and editing raster images.
 
 
-* This was a project I worked on back in March of 2023. *
+### This was a project I worked on back in March of 2023. 
 
