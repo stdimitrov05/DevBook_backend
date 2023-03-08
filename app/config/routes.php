@@ -13,6 +13,11 @@ $frontendCollection->get(
     'indexAction'
 );
 
+$frontendCollection->get(
+    '/countries',
+    'getCountriesAction'
+);
+
 $app->mount($frontendCollection);
 
 /*============================
@@ -27,6 +32,12 @@ $userCollection->setHandler('\App\Controllers\UsersController', true);
 $userCollection->get(
     '/{userId:[1-9][0-9]*}/details',
     'userDetailsAction'
+);
+
+// Set user billing
+$userCollection->post(
+    '/{userId:[1-9][0-9]*}/billing',
+    'billingAction'
 );
 
 // Delete account
@@ -113,6 +124,11 @@ $devCollection->post(
 $devCollection->post(
     '/elastic/avatars/index',
     'createAvatarsAction'
+);
+// Create user billing index
+$devCollection->post(
+    '/elastic/users/billing/index',
+    'createUserBillingAction'
 );
 
 

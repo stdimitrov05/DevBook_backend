@@ -7,6 +7,7 @@ use App\Exceptions\ServiceException;
 use App\Lib\Helper;
 use App\Models\Avatars;
 use App\Models\EmailConfirmations;
+use App\Models\UserBillings;
 use App\Models\Users;
 use Intervention\Image\ImageManager;
 
@@ -85,7 +86,6 @@ class UsersService extends AbstractService
 
     }
 
-
     /**
      * details
      * @param int $userId
@@ -94,16 +94,10 @@ class UsersService extends AbstractService
     public function details(int $userId): array
     {
         $result = [];
-        $loggedId = $this->getLoggedUser();
-
-        if ($userId !== $loggedId) {
-            throw  new ServiceException(
-                "User is not authorized",
-                self::ERROR_USER_NOT_AUTHORIZED
-            );
-        }
+        $loggedId = $this->isUserAuthorized($userId);
 
         $user =  Users::findFirstById($loggedId);
+
         if (!$user->id || $user->active !== 1) {
             throw  new ServiceException(
                 "User is not found",
@@ -124,12 +118,54 @@ class UsersService extends AbstractService
             $result['greeting'] = ("Good Evening!");
         }
 
-
         // Get avatar
         $result['user'] = $this->elastic->getUserData($loggedId);
 
         return $result;
     }
+
+    /**
+     * Set billing details
+     * @param int $userId
+     * @param array $data
+     * @return null
+     */
+    public function billing(int $userId, array $data)
+    {
+        // User is authorized
+        $data['user_id'] = $this->isUserAuthorized($userId);
+        $haveBilling = UserBillings::findFirst(
+            [
+                'conditions' => 'user_id = :userId:',
+                'bind' => ['userId' => $userId]
+            ]);
+
+        if (!$haveBilling) {
+            $billing = new UserBillings();
+            $billing->user_id = $userId;
+            $billing->location_id = $data['location_id'];
+            $billing->description = $data['description'];
+            $created = $billing->create();
+
+            if ($created !== true) {
+                throw  new ServiceException(
+                    "Unable to save billing",
+                    self::ERROR_UNABLE_TO_CREATE
+                );
+            }
+            // Insert to elastic
+            $this->elastic->insertUserBilling($billing->id, $data);
+        } else {
+            throw  new ServiceException(
+                "You can`t save billing again",
+                self::ERROR_UNABLE_TO_CREATE
+            );
+        }
+
+
+        return null;
+    }
+
 
     /**
      * delete
@@ -203,7 +239,7 @@ class UsersService extends AbstractService
     /**
      * clearUserJtis
      * @param int $userId
-     * */
+     */
     public function clearUserJtis(int $userId): void
     {
         // Get jtis from sets
@@ -223,7 +259,6 @@ class UsersService extends AbstractService
      * @param string $type
      * @return string
      */
-
     private function getTypeToString(string $type): string
     {
         (string)$fileType = '';
@@ -273,7 +308,6 @@ class UsersService extends AbstractService
      * @param array $file
      * @retrun null
      */
-
     private function uploadAvatarFile(int|null $userId = null, array $file): void
     {
         $file['file']['name'] = time();
@@ -342,11 +376,35 @@ class UsersService extends AbstractService
      * getLoggedUser
      * @retrun integer
      * */
-
     private function getLoggedUser(): int
     {
         $jwt = $this->authService->getJwtToken();
-        $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+
+        if (!$jwt) {
+            throw  new ServiceException(
+                "Bad token",
+                self::ERROR_BAD_TOKEN
+            );
+        }
+
+        return intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+    }
+
+    /**
+     * isUserAuthorized
+     * @param int $userId
+     * @return  int
+     * */
+    private function isUserAuthorized(int $userId): int
+    {
+        $loggedId = $this->getLoggedUser();
+
+        if ($userId !== $loggedId) {
+            throw  new ServiceException(
+                "User is not authorized",
+                self::ERROR_USER_NOT_AUTHORIZED
+            );
+        }
 
         return $loggedId;
     }

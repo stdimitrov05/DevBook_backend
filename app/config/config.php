@@ -34,13 +34,14 @@ return new \Phalcon\Config\Config(
             'refreshTokenRememberExpire' => getenv('JWT_REFRESH_TOKEN_REMEMBER_EXPIRE'),
             'ignoreUri' => [
                 '/',
-                '/signup:POST',
-                '/login:POST',
-                '/forgotPassword:POST',
-                '/check/forgotPassword/token:POST',
-                '/users/email/confirm:POST',
-                '/users/resend/email/confirm:POST',
-                '/forgot-password/change-password:POST',
+                '/countries',
+                '/signup',
+                '/login',
+                '/forgotPassword',
+                '/check/forgotPassword/token',
+                '/users/email/confirm',
+                '/users/resend/email/confirm',
+                '/forgot-password/change-password',
             ]
         ],
     ]

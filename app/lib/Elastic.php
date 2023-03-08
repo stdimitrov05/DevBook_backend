@@ -2,7 +2,6 @@
 
 namespace App\Lib;
 
-use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
 
 class Elastic extends AbstractService
@@ -17,9 +16,8 @@ class Elastic extends AbstractService
     /**
      * createUsersIndex
      * @uses  \Elastic\Elasticsearch\ClientBuilder
-     * @retrun  null
      */
-    public function createUsersIndex()
+    public function createUsersIndex(): void
     {
         // Create params
         $params = [
@@ -28,7 +26,10 @@ class Elastic extends AbstractService
                 'mappings' => [
                     'properties' => [
                         'id' => [
-                            'type' => 'integer'
+                            'type' => 'join',
+                            "relations" => [
+                                "users" => "user_billing"
+                            ]
                         ],
                         'username' => [
                             'type' => 'keyword'
@@ -59,30 +60,79 @@ class Elastic extends AbstractService
         ];
 
         $this->elasticsearch->indices()->create($params);
-        // Check if the index exists
-        if (!$this->elasticsearch->indices()->exists(['index' => 'users'])) {
-            throw new ServiceException('Unable to create index',
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
-
-        return null;
     }
+
+    /**
+     * createUserBillingIndex
+     * @uses  \Elastic\Elasticsearch\ClientBuilder
+     */
+    public function createUserBillingIndex(): void
+    {
+        // Create params
+        $params = [
+            'index' => 'user_billing',
+            'body' => [
+                'mappings' => [
+                    'properties' => [
+                        'id' => [
+                            'type' => 'integer'
+                        ],
+                        'user_id' => [
+                            'type' => 'join',
+                            'relations' =>[
+                                "users"=>"user_billing"
+                            ]
+                        ],
+                        'location_id' => [
+                            'type' => 'integer'
+                        ],
+                        'description' => [
+                            'type' => 'keyword'
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        $this->elasticsearch->indices()->create($params);
+    }
+
+    /**
+     * insertUserBilling
+     * @param int $billingId
+     * @param array $data
+     * @retrun  null
+     * */
+    public function insertUserBilling(int $billingId, array $data): void
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'user_billing',
+            'id' => $billingId, // ID of the document you are inserting
+            'body' => [
+                "user_id" => $data['user_id'],
+                "location_id" => $data['location_id'],
+                "description" => $data['description'],
+            ]
+        ];
+
+        $this->elasticsearch->index($requestBody);
+    }
+
 
     /**
      * insertUserData
      * @param array $userData
-     * @retrun  null
-     * */
-
-    public function insertUserData(array $userData)
+     */
+    public function insertUserData(array $userData): void
     {
         $requestBody = [];
 
         $requestBody = [
             'index' => 'users',
-            'id' => $userData['id'], // ID of the document you are inserting
             'body' => [
+                'id' => $userData['id'], // ID of the document you are inserting
                 "username" => $userData['username'],
                 "email" => $userData['email'],
                 "password" => $userData['password'],
@@ -101,9 +151,8 @@ class Elastic extends AbstractService
      * updateUserActivateById
      * @param int $userId
      * @retrun  null
-     * */
-
-    public function updateUserActivateById(int $userId)
+     */
+    public function updateUserActivateById(int $userId): void
     {
         $requestBody = [];
 
@@ -126,7 +175,6 @@ class Elastic extends AbstractService
      * @param int $userId
      * @return  bool
      * */
-
     public function deleteUserById(int $userId): bool
     {
         $requestBody = [];
@@ -152,9 +200,8 @@ class Elastic extends AbstractService
     /**
      * createAvatarIndex
      * @uses  \Elastic\Elasticsearch\ClientBuilder
-     * @retrun  null
      */
-    public function createAvatarIndex()
+    public function createAvatarIndex(): void
     {
         // Create params
         $params = [
@@ -186,24 +233,15 @@ class Elastic extends AbstractService
         ];
 
         $this->elasticsearch->indices()->create($params);
-        // Check if the index exists
-        if (!$this->elasticsearch->indices()->exists(['index' => 'avatars'])) {
-            throw new ServiceException('Unable to create index',
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
-
-        return null;
     }
 
 
     /**
      * insertAvatarData
      * @param array $avatarData
-     * @retrun  null
-     * */
+     */
 
-    public function insertAvatarData(array $avatarData)
+    public function insertAvatarData(array $avatarData): void
     {
         $requestBody = [];
 
@@ -219,7 +257,6 @@ class Elastic extends AbstractService
             ]
         ];
 
-
         $this->elasticsearch->index($requestBody);
     }
 
@@ -227,7 +264,7 @@ class Elastic extends AbstractService
      * getAvatarById
      * @param int $userId
      * @retrun  string | null
-     * */
+     */
 
     public function getAvatarById(int $userId): string|null
     {

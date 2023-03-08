@@ -30,4 +30,12 @@ class DevController extends AbstractController
     {
         $this->elastic->createAvatarIndex();
     }
+
+    /*
+     * createUserBillingIndex
+     * */
+    public function createUserBillingAction()
+    {
+        $this->elastic->createUserBillingIndex();
+    }
 }
