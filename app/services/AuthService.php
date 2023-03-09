@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\HttpExceptions\Http403Exception;
 use App\Exceptions\ServiceException;
 use App\Lib\Helper;
+use App\Models\EmailConfirmations;
+use App\Models\ForgotPassword;
 use App\Models\LoginsFailed;
 use App\Models\Users;
 use Phalcon\Db\Column;
@@ -53,6 +56,7 @@ class AuthService extends AbstractService
             ]
         );
 
+
         // If user is not found
         if (!$user) {
             $this->registerUserThrottling(0);
@@ -71,14 +75,6 @@ class AuthService extends AbstractService
             );
         }
 
-        // If user profile has deleted
-        if (!empty($user->deleted_at)) {
-            $this->registerUserThrottling(0);
-            throw new ServiceException(
-                'Wrong email or password',
-                self::ERROR_WRONG_EMAIL_OR_PASSWORD
-            );
-        }
 
         // Check if the user was flagged
         $this->checkUserFlags($user);
@@ -182,30 +178,41 @@ class AuthService extends AbstractService
     /**
      * forgotPassword
      * @param string $email
-     * @retrun array
+     * @retrun null
      */
-    public function forgotPassword(string $email): array
+    public function forgotPassword(string $email)
     {
-        $this->db->begin();
+        $clientIpAddress = $this->request->getClientAddress();
+        $userAgent = $this->request->getUserAgent();
+
         // Check email
         $user = Users::findFirstByEmail($email);
 
-        if (!$user) {
-            throw  new ServiceException(
-                "Sending email...",
-                self::ERROR_IS_NOT_FOUND
-            );
+        if ($user) {
+            // Check user flags
+            $this->checkUserFlags($user);
+
+            // Generate confirmToken
+            $confirmToken = Helper::generateToken();
+
+            $forgotPassword = new ForgotPassword();
+            $forgotPassword->user_id = $user->id;
+            $forgotPassword->token = $confirmToken;
+            $forgotPassword->ip_address = empty($clientIpAddress) ? null : $clientIpAddress;
+            $forgotPassword->user_agent = empty($userAgent) ? null : substr($userAgent, 0, 250);
+            $created = $forgotPassword->create();
+
+            if (!$created) {
+                throw  new ServiceException(
+                    "Unable to create token",
+                    self::ERROR_UNABLE_TO_CREATE
+                );
+            }
+
+            // Send email forgot password >>>
         }
 
-        // Check user flags
-        $this->checkUserFlags($user);
-
-        // Generate confirmToken
-        $confirmToken  = Helper::generateToken();
-
-
-
-        var_dump($confirmToken);die;
+        return null;
     }
 
 
@@ -427,24 +434,198 @@ class AuthService extends AbstractService
      * @param \App\Models\Users $user
      * @throws ServiceException
      */
-    private function checkUserFlags(Users $user)
+    public function checkUserFlags(Users $user)
     {
+        if ($user->deleted_at != null) {
+            throw new ServiceException(
+                'The user is deleted',
+                self::ERROR_ACCOUNT_IS_DELETED
+            );
+        }
+
         if ($user->active != 1) {
             throw new ServiceException(
                 'The user is inactive',
                 self::ERROR_USER_NOT_ACTIVE
             );
         }
+
     }
 
     /**
-    * emailConfirm
-     * @param string $param
+     * emailConfirm
+     * @param string $token
      * @return  array
      */
-    public function emailConfirm(string $param) : array
+    public function emailConfirm(string $token): array
     {
+        // Start a transaction
+        $this->db->begin();
 
+        try {
+            // Found current token
+            $email = EmailConfirmations::findFirstByToken($token);
+            // Check
+            if (!$email) {
+                throw  new ServiceException(
+                    "Token is not found",
+                    self::ERROR_IS_NOT_FOUND
+                );
+            } elseif ($email->confirmed === 1) {
+                throw  new ServiceException(
+                    "Token is confirmed",
+                    self::ERROR_TOKEN_HAS_CONFIRMED
+                );
+            }
+            // Update current token as confirmed
+            $email->confirmed = 1;
+            $email->update();
+            // Update in users table column activate
+            $user = Users::findFirst([
+                'conditions' => 'id = :id:',
+                'bind' => ['id' => $email->user_id]
+            ]);
+
+            $user->active = 1;
+            $user->update();
+
+            // Update activate in elastic
+            $this->elastic->updateUserActivateById($user->id);
+            // Generate jwt tokens for 1 w
+            $jwtTokens = $this->generateJwtTokens($user->id);
+
+
+            $this->db->commit();
+
+            return [
+                "accessToken" => $jwtTokens['accessToken'],
+                "refreshToken" => $jwtTokens['refreshToken']
+            ];
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            throw new Http403Exception($e->getMessage(), self::ERROR_BAD_TOKEN, $e);
+        }
+
+    }
+
+    /**
+     * resendEmailConfrim
+     * @param string $token
+     * @retrun  null
+     */
+    public function resendEmailConfirm(string $token)
+    {
+        // Get userId form confirm token
+        $email = EmailConfirmations::findFirst([
+            'conditions' => 'token = :token:',
+            'bind' => ['token' => $token]
+        ]);
+
+        if (!$email) {
+            throw  new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+        // Get user data
+        $user = Users::findFirst([
+            'conditions' => 'id = :userId:',
+            'bind' => ['userId' => $email->user_id]
+        ]);
+
+        if (!$user) {
+            throw  new ServiceException(
+                "User email is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
+        // Generate new confirmToken
+        $confirmToken = Helper::generateToken();
+        // Send new email with new confrim token
+        $this->mailer->confirmEmail($user->email, $user->username, $confirmToken);
+
+        return null;
+    }
+
+
+    /**
+     * checkResetToken
+     * @param string $token
+     * @retrun  array
+     */
+    public function checkResetToken(string $token): array
+    {
+        $resetToken = ForgotPassword::findFirstByToken($token);
+
+        if (!$resetToken) {
+            throw  new ServiceException(
+                "Invalid reset token",
+                self::ERROR_BAD_TOKEN
+            );
+        } elseif ($resetToken->confirmed === 1) {
+            throw  new ServiceException(
+                "Token is confirmed",
+                self::ERROR_TOKEN_HAS_CONFIRMED
+            );
+        }
+
+        return [
+            "token" => $resetToken->token
+        ];
+    }
+
+    /**
+     * changeForgotPassword
+     * @param array $data
+     * @return  null
+     */
+    public function changeForgotPassword(array $data)
+    {
+        $userId = ForgotPassword::findFirstByToken($data['token'])->user->id;
+
+        if (!$userId) {
+            throw new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+        $user = Users::findFirst([
+            'conditions' => 'id = :id:',
+            'bind' => ['id' => $userId]
+        ]);
+
+        // Check the password
+        if (!$this->security->checkHash($data['oldPassword'], $user->password)) {
+            throw new ServiceException(
+                'Wrong old password',
+                self::ERROR_WRONG_PASSWORD
+            );
+        }
+
+        // The two passwords do not match
+        if ($data['newPassword'] !== $data['currentPassword']) {
+            throw new ServiceException(
+                'The two passwords do not match',
+                self::ERROR_WRONG_PASSWORD
+            );
+        }
+
+        // Hash new password
+        $hashPassword = $this->getDI()->getSecurity()->hash($data['newPassword']);
+
+        // Update user password
+        $user->password = $hashPassword;
+        $isUpdate = $user->update();
+
+        if ($isUpdate !== true) {
+            throw  new ServiceException(
+                "Unable to update",
+                self::ERROR_UNABLE_TO_UPDATE
+            );
+        }
+        return null;
 
     }
 

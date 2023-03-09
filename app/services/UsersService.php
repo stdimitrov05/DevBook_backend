@@ -7,6 +7,7 @@ use App\Exceptions\ServiceException;
 use App\Lib\Helper;
 use App\Models\Avatars;
 use App\Models\EmailConfirmations;
+use App\Models\UserBillings;
 use App\Models\Users;
 use Intervention\Image\ImageManager;
 
@@ -43,6 +44,21 @@ class UsersService extends AbstractService
                     self::ERROR_NOT_EXISTS
                 );
             }
+
+            $userData = [
+                'id'=>$user->id,
+                'username'=>$user->username,
+                'email'=>$user->email,
+                'password'=>$user->password,
+                'balance'=>$user->balance,
+                'active'=>$user->active,
+                'created_at'=>$user->created_at,
+                'deleted_at'=>$user->deleted_at,
+
+            ];
+            // Insert in elasticsearch
+            $this->elastic->insertUserData($userData);
+
             // Uploaded avatar
             $this->uploadAvatarFile($user->id, $file);
 
@@ -58,6 +74,7 @@ class UsersService extends AbstractService
             // Commit the transaction
             $this->db->commit();
 
+
             $this->mailer->confirmEmail($user->email, $user->username, $confirmToken);
 
         } catch (\Exception $e) {
@@ -69,7 +86,6 @@ class UsersService extends AbstractService
 
     }
 
-
     /**
      * details
      * @param int $userId
@@ -78,8 +94,17 @@ class UsersService extends AbstractService
     public function details(int $userId): array
     {
         $result = [];
-        $jwt = $this->authService->getJwtToken();
-        $loggedId = intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+        $loggedId = $this->isUserAuthorized($userId);
+
+        $user =  Users::findFirstById($loggedId);
+
+        if (!$user->id || $user->active !== 1) {
+            throw  new ServiceException(
+                "User is not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        }
+
         date_default_timezone_set('Europe/Sofia');
         $currentHour = date('H');
 
@@ -93,6 +118,65 @@ class UsersService extends AbstractService
             $result['greeting'] = ("Good Evening!");
         }
 
+        // Get avatar
+        $result['user'] = $this->elastic->getUserData($loggedId);
+
+        return $result;
+    }
+
+    /**
+     * Set billing details
+     * @param int $userId
+     * @param array $data
+     * @return null
+     */
+    public function billing(int $userId, array $data)
+    {
+        // User is authorized
+        $data['user_id'] = $this->isUserAuthorized($userId);
+        $haveBilling = UserBillings::findFirst(
+            [
+                'conditions' => 'user_id = :userId:',
+                'bind' => ['userId' => $userId]
+            ]);
+
+        if (!$haveBilling) {
+            $billing = new UserBillings();
+            $billing->user_id = $userId;
+            $billing->location_id = $data['location_id'];
+            $billing->description = $data['description'];
+            $created = $billing->create();
+
+            if ($created !== true) {
+                throw  new ServiceException(
+                    "Unable to save billing",
+                    self::ERROR_UNABLE_TO_CREATE
+                );
+            }
+            // Insert to elastic
+            $this->elastic->insertUserBilling($billing->id, $data);
+        } else {
+            throw  new ServiceException(
+                "You can`t save billing again",
+                self::ERROR_UNABLE_TO_CREATE
+            );
+        }
+
+
+        return null;
+    }
+
+
+    /**
+     * delete
+     * @param int $userId
+     * @retrun  null
+     * */
+
+    public function delete(int $userId)
+    {
+        $loggedId = $this->getLoggedUser();
+
         if ($userId !== $loggedId) {
             throw  new ServiceException(
                 "User is not authorized",
@@ -100,38 +184,81 @@ class UsersService extends AbstractService
             );
         }
 
-        $sql = "SELECT 
-                    u.username,
-                    u.balance,
-                    av.name,
-                    av.path
-                FROM users u
-                INNER JOIN avatars av ON av.user_id = u.id
-                WHERE u.id = :userId
-        ";
+        // Administrators check
+        //        if ($loggedId !== $adminId) {
+        //            throw  new ServiceException(
+        //                "User is not authorized",
+        //                self::ERROR_USER_NOT_AUTHORIZED
+        //            );
+        //        }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindParam('userId', $userId, \PDO::PARAM_INT);
-        $stmt->execute();
-        $result['userDetails'] = $stmt->fetchAll();
+        // Update data in database
+        $user = Users::findFirst([
+            'conditions' => 'id = :id:',
+            'bind' => ['id' => $userId]
+        ]);
 
-        if (!$result) {
-            throw new  ServiceException(
-                "Details is not found",
+        if (!$user) {
+            throw  new ServiceException(
+                "User is not found",
                 self::ERROR_IS_NOT_FOUND
             );
         }
 
-        return $result;
+        // Check user flags
+        $this->authService->checkUserFlags($user);
+
+        $user->active = 0;
+        $user->deleted_at = time();
+        $deleted = $user->update();
+
+        if ($deleted !== true) {
+            throw new ServiceException(
+                "Unable to update deleted_at",
+                self::ERROR_UNABLE_TO_UPDATE
+            );
+        }
+
+        // Clear in elastic
+        $isDeleted = $this->elastic->deleteUserById($userId);
+
+        if ($isDeleted !== true) {
+            throw  new ServiceException(
+                "Unable to delete account",
+                self::ERROR_UNABLE_TO_DELETE_ACCOUNT
+            );
+        }
+
+        // Clear in redis
+        $this->clearUserJtis($userId);
+
+        return null;
     }
 
+
+    /**
+     * clearUserJtis
+     * @param int $userId
+     */
+    public function clearUserJtis(int $userId): void
+    {
+        // Get jtis from sets
+        $jtis = $this->redis->sMembers('users:' . $userId . ":jtis");
+
+        // Clear whitelist jtis
+        foreach ($jtis as $jti) {
+            $this->redis->del("wl_" . $jti);
+        }
+
+        // Delete sets
+        $this->redis->del("users:" . $userId . ":jtis");
+    }
 
     /**
      * Get from $_FILE  current type to string
      * @param string $type
      * @return string
      */
-
     private function getTypeToString(string $type): string
     {
         (string)$fileType = '';
@@ -181,7 +308,6 @@ class UsersService extends AbstractService
      * @param array $file
      * @retrun null
      */
-
     private function uploadAvatarFile(int|null $userId = null, array $file): void
     {
         $file['file']['name'] = time();
@@ -210,7 +336,17 @@ class UsersService extends AbstractService
                 self::ERROR_UNABLE_TO_CREATE
             );
         }
+        $avatar = [
+            'id' => $avatar->id,
+            'user_id' => $avatar->user_id,
+            'name' => $avatar->name,
+            'type' => $avatar->type,
+            'size' => $avatar->size,
+            'path' => $avatar->path,
+        ];
 
+        // Insert avatar in elastic
+        $this->elastic->insertAvatarData($avatar);
         // Move from temp to uploaded folder
         $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
         // Can`t upload image
@@ -234,6 +370,43 @@ class UsersService extends AbstractService
             $image->save($uploadFolder);
         }
 
+    }
+
+    /**
+     * getLoggedUser
+     * @retrun integer
+     * */
+    private function getLoggedUser(): int
+    {
+        $jwt = $this->authService->getJwtToken();
+
+        if (!$jwt) {
+            throw  new ServiceException(
+                "Bad token",
+                self::ERROR_BAD_TOKEN
+            );
+        }
+
+        return intval($this->authService->decodeJWT($jwt)->getPayload()['sub']);
+    }
+
+    /**
+     * isUserAuthorized
+     * @param int $userId
+     * @return  int
+     * */
+    private function isUserAuthorized(int $userId): int
+    {
+        $loggedId = $this->getLoggedUser();
+
+        if ($userId !== $loggedId) {
+            throw  new ServiceException(
+                "User is not authorized",
+                self::ERROR_USER_NOT_AUTHORIZED
+            );
+        }
+
+        return $loggedId;
     }
 
 }

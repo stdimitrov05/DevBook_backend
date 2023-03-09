@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Exceptions\HttpExceptions\Http400Exception;
+use App\Lib\Elastic;
 
 /**
  * Class AbstractController
@@ -14,6 +15,7 @@ use App\Exceptions\HttpExceptions\Http400Exception;
  * @property \App\Services\FrontendService $frontendService
  * @property \App\Services\AuthService $authService
  * @property \App\Services\UsersService $usersService
+ * @property  Elastic $elastic
  *
  */
 abstract class AbstractController extends \Phalcon\DI\Injectable

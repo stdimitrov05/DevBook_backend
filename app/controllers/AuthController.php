@@ -7,6 +7,8 @@ use App\Exceptions\HttpExceptions\Http422Exception;
 use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
+use App\Validation\ChangeFrogotPasswordValidation;
+use App\Validation\EmailConfirmValidation;
 use App\Validation\ForgotPasswordValidation;
 use App\Validation\LoginValidation;
 use App\Validation\SignupValidation;
@@ -86,6 +88,7 @@ class AuthController extends AbstractController
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 AbstractService::ERROR_REDIS_NOT_SET_DATA,
                 AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_ACCOUNT_IS_DELETED,
                 AbstractService::ERROR_WRONG_EMAIL_OR_PASSWORD,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -120,10 +123,10 @@ class AuthController extends AbstractController
 
     /**
      * forgotPasswordAction
-     * @retrun  array
+     * @retrun  null
      */
 
-    public function forgotPasswordAction(): array
+    public function forgotPasswordAction()
     {
         // Get email
         $email = $this->request->getPost();
@@ -142,7 +145,9 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_ACCOUNT_IS_DELETED,
                 AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_UNABLE_TO_CREATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
@@ -159,14 +164,22 @@ class AuthController extends AbstractController
      */
     public function emailConfirmAction(): array
     {
-        $confirmToken = $this->request->getPost('token');
+        $confirmToken = $this->request->getPost();
+
+        // Start validation
+        $validation = new EmailConfirmValidation();
+        $messages = $validation->validate($confirmToken);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
 
         try {
-            $response = $this->authService->emailConfirm((string)$confirmToken);
+            $response = $this->authService->emailConfirm((string)$confirmToken['token']);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_USER_NOT_ACTIVE,
+                AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
                 AbstractService::ERROR_IS_NOT_FOUND,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -177,4 +190,109 @@ class AuthController extends AbstractController
         return $response;
     }
 
+
+    /**
+     * resendEmailConfirmAction
+     * @retrun null
+     */
+
+
+    public function resendEmailConfirmAction()
+    {
+        $confirmToken = $this->request->getPost();
+
+        // Start validation
+        $validation = new EmailConfirmValidation();
+        $messages = $validation->validate($confirmToken);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->authService->resendEmailConfirm((string)$confirmToken['token']);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
+                AbstractService::ERROR_IS_NOT_FOUND,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+    }
+
+    /**
+     * checkRestPasswordTokenAction
+     * @retrun array
+     */
+    public function checkRestPasswordTokenAction(): array
+    {
+        $resetToken = $this->request->getPost();
+
+        // Start validation
+        $validation = new EmailConfirmValidation();
+        $messages = $validation->validate($resetToken);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->authService->checkResetToken((string)$resetToken['token']);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_BAD_TOKEN,
+                AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+    }
+
+    /**
+     * changeForgotPasswordAction
+     * @retrun array
+     */
+
+    public function changeForgotPasswordAction()
+    {
+        $data = [];
+
+        // Collect and trim request params
+        foreach ($this->request->getPost() as $key => $value) {
+            $data[$key] = $this->request->getPost($key, ['string', 'trim']);
+        }
+
+        // Start validation
+        $validation = new ChangeFrogotPasswordValidation();
+        $messages = $validation->validate($data);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->authService->changeForgotPassword((array)$data);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_NOT_EXISTS,
+                AbstractService::ERROR_WRONG_PASSWORD,
+                AbstractService::ERROR_UNABLE_TO_UPDATE,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+
+        }
+
+        return $response;
+    }
 }
