@@ -2,6 +2,7 @@
 
 namespace App\Lib;
 
+use App\Models\Countries;
 use App\Services\AbstractService;
 
 class Elastic extends AbstractService
@@ -26,10 +27,7 @@ class Elastic extends AbstractService
                 'mappings' => [
                     'properties' => [
                         'id' => [
-                            'type' => 'join',
-                            "relations" => [
-                                "users" => "user_billing"
-                            ]
+                            'type' => 'integer'
                         ],
                         'username' => [
                             'type' => 'keyword'
@@ -78,10 +76,7 @@ class Elastic extends AbstractService
                             'type' => 'integer'
                         ],
                         'user_id' => [
-                            'type' => 'join',
-                            'relations' =>[
-                                "users"=>"user_billing"
-                            ]
+                            'type' => 'integer',
                         ],
                         'location_id' => [
                             'type' => 'integer'
@@ -131,8 +126,8 @@ class Elastic extends AbstractService
 
         $requestBody = [
             'index' => 'users',
+            'id' => $userData['id'], // ID of the document you are inserting
             'body' => [
-                'id' => $userData['id'], // ID of the document you are inserting
                 "username" => $userData['username'],
                 "email" => $userData['email'],
                 "password" => $userData['password'],
@@ -158,7 +153,6 @@ class Elastic extends AbstractService
 
         $requestBody = [
             'index' => 'users',
-            'type' => 'user',
             'id' => $userId, // Replace with the user ID you want to update
             'body' => [
                 'doc' => [
@@ -166,7 +160,6 @@ class Elastic extends AbstractService
                 ]
             ]
         ];
-
         $this->elasticsearch->update($requestBody);
     }
 
@@ -303,26 +296,49 @@ class Elastic extends AbstractService
         $requestBody = [];
 
         $requestBody = [
-            'index' => 'users',
             'body' => [
-                '_source' => true,
-                'query' => [
-                    'match' => [
-                        '_id' => $userId // Replace with the user ID you want to get avatars for
-                    ]
-                ],
-                'fields' => ['*']
+                // First search request
+                [],
+                ['query' => ['match' => ['_id' => $userId]]],
+                // Second search request
+                ['index' => 'user_billing'],
+                ['query' => ['match' => ['user_id' => $userId]]],
+                // Third search request
+                ['index' => 'avatars'],
+                ['query' => ['match' => ['user_id' => $userId]]],
             ]
         ];
 
-        $response = $this->elasticsearch->search($requestBody);
+        $response = $this->elasticsearch->msearch($requestBody);
+        $count = $response['responses'][0]['_shards']['total'];
         $user = [];
-        foreach ($response['hits']['hits'] as $hit) {
-            $user['username'] = $hit['fields']['username'][0];
-            $user['balance'] = $hit['fields']['balance'][0];
-        }
-        $user['avatar'] = $this->getAvatarById($userId);
 
-        return !$user ? [] : $user;
+        for ($i = 0; $i < $count; $i++) {
+            foreach ($response['responses'][$i]['hits']['hits'] as $hit) {
+                $user[$hit['_index']] = $hit['_source'];
+
+            }
+        }
+        $locationId = $user['user_billing']['location_id'];
+        $getCountriesName = Countries::findFirstById($locationId);
+
+        $mappingData = [
+          'account'=>[
+              'username'=>$user['users']['username'],
+              'email'=>$user['users']['email'],
+              'balance'=>Helper::formatPrice($user['users']['balance']),
+          ],
+            'billing'=>[
+                'location'=>$getCountriesName->name,
+                'description'=>$user['user_billing']['description'],
+            ],
+            'avatar'=>[
+                'name'=>$user['avatars']['name'],
+                'path'=>$user['avatars']['path'],
+            ],
+        ];
+
+        return !$mappingData ? [] : $mappingData;
     }
+
 }

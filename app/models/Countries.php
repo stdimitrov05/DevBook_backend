@@ -35,6 +35,6 @@ class  Countries extends Model
 
     public function initialize()
     {
-        $this->setSource('users_billing');
+        $this->setSource('countries');
     }
 }
