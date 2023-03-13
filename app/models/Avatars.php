@@ -35,6 +35,13 @@ class Avatars extends \Phalcon\Mvc\Model
      * @var string
      * @Column(type="string", length=255, nullable=false)
      */
+    public $extension;
+
+    /**
+     *
+     * @var string
+     * @Column(type="string", length=255, nullable=false)
+     */
     public $type;
 
     /**

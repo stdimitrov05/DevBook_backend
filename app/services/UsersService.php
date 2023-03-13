@@ -29,8 +29,6 @@ class UsersService extends AbstractService
         try {
             // Start a transaction
             $this->db->begin();
-            // Get uploaded file
-            $file = $_FILES;
             // Connecting with Users models
             $user = new Users();
             // Insert data in database
@@ -46,21 +44,18 @@ class UsersService extends AbstractService
             }
 
             $userData = [
-                'id'=>$user->id,
-                'username'=>$user->username,
-                'email'=>$user->email,
-                'password'=>$user->password,
-                'balance'=>$user->balance,
-                'active'=>$user->active,
-                'created_at'=>$user->created_at,
-                'deleted_at'=>$user->deleted_at,
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'password' => $user->password,
+                'balance' => $user->balance,
+                'active' => $user->active,
+                'created_at' => $user->created_at,
+                'deleted_at' => $user->deleted_at,
 
             ];
             // Insert in elasticsearch
             $this->elastic->insertUserData($userData);
-
-            // Uploaded avatar
-            $this->uploadAvatarFile($user->id, $file);
 
             $confirmToken = Helper::generateToken();
 
@@ -82,7 +77,9 @@ class UsersService extends AbstractService
             throw new Http403Exception($e->getMessage(), self::ERROR_BAD_TOKEN, $e);
         }
 
-        return null;
+        return [
+            "userId" => $user->id
+        ];
 
     }
 
@@ -93,12 +90,13 @@ class UsersService extends AbstractService
      */
     public function details(int $userId): array
     {
+
         $result = [];
         $loggedId = $this->isUserAuthorized($userId);
 
-        $user =  Users::findFirstById($loggedId);
+        $user = Users::findFirstById($loggedId);
 
-        if (!$user->id || $user->active !== 1) {
+        if (!$user->id || $user->active === 0) {
             throw  new ServiceException(
                 "User is not found",
                 self::ERROR_IS_NOT_FOUND
@@ -119,7 +117,7 @@ class UsersService extends AbstractService
         }
 
         // Get avatar
-        $result['user'] = $this->elastic->getUserData($loggedId);
+        $result['elastic'] = $this->elastic->getUserData($loggedId);
 
         return $result;
     }
@@ -255,51 +253,26 @@ class UsersService extends AbstractService
     }
 
     /**
-     * Get from $_FILE  current type to string
-     * @param string $type
-     * @return string
-     */
-    private function getTypeToString(string $type): string
+     * uploadAvatar
+     * @param int $userId
+     * @param array $file
+     * */
+    public function uploadAvatar(int $userId, array $file)
     {
-        (string)$fileType = '';
 
-        // Supports Types as array
-        $supportTypes = [
-            "image/png",
-            "image/jpg",
-            "image/jpeg",
-            "image/gif",
-        ];
+        $avatar = Avatars::findFirst([
+            'conditions' => 'user_id = ?1 ',
+            'bind' => [1 => $userId],
+        ]);
 
-        // Check types
-        switch ($type) {
-            case  "image/png" :
-                $fileType = "png";
-                break;
+        if (!$avatar) {
+            if ($file) {
+                $this->uploadAvatarFile($userId, $file);
+            }
+        }
 
-            case  "image/jpg" :
-                $fileType = "jpg";
-                break;
+        return null;
 
-            case  "image/jpeg" :
-                $fileType = "jpeg";
-                break;
-
-            case  "image/gif" :
-                $fileType = "gif";
-                break;
-
-            default :
-                if (in_array($type, $supportTypes) === false) {
-                    throw new ServiceException(
-                        "This format is not supported",
-                        self::ERROR_FORMAT_IS_NOT_SUPPORT
-                    );
-                }
-                break;
-        };
-
-        return $fileType;
     }
 
     /**
@@ -310,12 +283,18 @@ class UsersService extends AbstractService
      */
     private function uploadAvatarFile(int|null $userId = null, array $file): void
     {
-        $file['file']['name'] = time();
-        $types = $this->getTypeToString($file['file']['type']);
-        (string)$path = $this->config->application->domain . '/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
-        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/' . $file['file']['name'] . "." . $types;
+        $fileObj = [];
+        foreach ($file as $data) {
+            $fileObj ["name"] = time();
+            $fileObj ["extension"] = $data->getExtension();
+            $fileObj ["size"] = $data->getSize();
+            $fileObj ["tmp"] = $data->getTempName();
+            $fileObj ["type"] = $data->getType();
+            $fileObj ["key"] = $data->getKey();
+        }
+        (string)$path = '/images/' . date("Y/M/d", time()) . '/' . $fileObj ["name"] . "." . $fileObj['extension'];
+        (string)$uploadFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/' . $fileObj ["name"] . "." . $fileObj['extension'];
         (string)$timeFolder = '/var/www/php/public/images/' . date("Y/M/d", time()) . '/';
-
         // If exist time folder  created
         if (!is_dir($timeFolder)) {
             mkdir($timeFolder, 0755, true);
@@ -323,11 +302,12 @@ class UsersService extends AbstractService
 
         // Call Avatar model
         $avatar = new Avatars();
-        $avatar->assign($file['file']);
-        $avatar->type = $types;
+        $avatar->assign($fileObj);
+        $avatar->type = $fileObj['type'];
+        $avatar->extension = $fileObj['extension'];
         $avatar->user_id = $userId;
         $avatar->path = $path;
-        $avatar->name = $file['file']['name'] . "." . $types;
+        $avatar->name = $fileObj["name"];
         $result = $avatar->create();
         // If not created
         if (!$result) {
@@ -336,6 +316,7 @@ class UsersService extends AbstractService
                 self::ERROR_UNABLE_TO_CREATE
             );
         }
+
         $avatar = [
             'id' => $avatar->id,
             'user_id' => $avatar->user_id,
@@ -348,7 +329,7 @@ class UsersService extends AbstractService
         // Insert avatar in elastic
         $this->elastic->insertAvatarData($avatar);
         // Move from temp to uploaded folder
-        $uploaded = move_uploaded_file($file['file']['tmp_name'], $uploadFolder);
+        $uploaded = move_uploaded_file($fileObj['tmp'], $uploadFolder);
         // Can`t upload image
         if ($uploaded === false) {
             throw new ServiceException(
@@ -364,7 +345,6 @@ class UsersService extends AbstractService
 
         // Remove origin image
         $isRemoveImage = unlink($uploadFolder);
-
         // If all gone save to uploaded folder
         if ($isRemoveImage === true) {
             $image->save($uploadFolder);
@@ -380,7 +360,11 @@ class UsersService extends AbstractService
     {
         $jwt = $this->authService->getJwtToken();
 
-        if (!$jwt) {
+        // Decode jwt
+        $decodeJwt = $this->authService->decodeJWT(json_encode($jwt));
+        $exp = $decodeJwt->getPayload()['exp'];
+
+        if (!$jwt || $exp < time()) {
             throw  new ServiceException(
                 "Bad token",
                 self::ERROR_BAD_TOKEN

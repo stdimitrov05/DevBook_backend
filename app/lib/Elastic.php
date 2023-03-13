@@ -316,29 +316,9 @@ class Elastic extends AbstractService
         for ($i = 0; $i < $count; $i++) {
             foreach ($response['responses'][$i]['hits']['hits'] as $hit) {
                 $user[$hit['_index']] = $hit['_source'];
-
             }
         }
-        $locationId = $user['user_billing']['location_id'];
-        $getCountriesName = Countries::findFirstById($locationId);
-
-        $mappingData = [
-          'account'=>[
-              'username'=>$user['users']['username'],
-              'email'=>$user['users']['email'],
-              'balance'=>Helper::formatPrice($user['users']['balance']),
-          ],
-            'billing'=>[
-                'location'=>$getCountriesName->name,
-                'description'=>$user['user_billing']['description'],
-            ],
-            'avatar'=>[
-                'name'=>$user['avatars']['name'],
-                'path'=>$user['avatars']['path'],
-            ],
-        ];
-
-        return !$mappingData ? [] : $mappingData;
+        return  $user;
     }
 
 }

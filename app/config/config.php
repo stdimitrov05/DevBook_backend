@@ -40,6 +40,7 @@ return new \Phalcon\Config\Config(
                 '/forgotPassword',
                 '/check/forgotPassword/token',
                 '/users/email/confirm',
+                'regex:' . '/users/{userId:[1-9][0-9]*}/avatar/upload',
                 '/users/resend/email/confirm',
                 '/forgot-password/change-password',
             ]

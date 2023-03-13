@@ -46,6 +46,12 @@ $userCollection->delete(
     'deleteAction'
 );
 
+// Upload avatar
+$userCollection->post(
+    '/{userId:[1-9][0-9]*}/avatar/upload',
+    'uploadAvatarAction'
+);
+
 $app->mount($userCollection);
 
 /*============================

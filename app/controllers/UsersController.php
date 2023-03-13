@@ -80,6 +80,33 @@ class UsersController extends AbstractController
         return $response;
     }
 
+    /**
+     * uploadAvatarAction
+     * @param int $userId
+     * @retrun  null
+     * */
+    public function uploadAvatarAction(int $userId)
+    {
+        $file = $this->request->getUploadedFiles();
+
+
+        try {
+            $response = $this->usersService->uploadAvatar($userId,$file);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_UNABLE_TO_CREATE,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_BAD_TOKEN,
+                => new Http404Exception($e->getMessage(), $e->getCode(), $e),
+
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+        }
+
+        return $response;
+    }
 
     /**
      * deleteAction
