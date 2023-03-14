@@ -164,6 +164,69 @@ class UsersService extends AbstractService
         return null;
     }
 
+    /**
+     * updateDetails
+     * @param int $userId ,
+     * @param array $data
+     * @retrun  null
+     * */
+    public function updateDetails(int $userId, array $data)
+    {
+        $userId = $this->isUserAuthorized($userId);
+
+        try {
+            // Start a transaction
+            $this->db->begin();
+
+            // Get user data
+            $user = Users::findFirstById($userId);
+
+            if ($user->username !== $data['username']) {
+                $user->username = $data['username'];
+
+                // Update username in elastic
+                $this->elastic->updateUsername($userId, $data['username']);
+                $user->update();
+
+            }
+
+            // Get user billing data
+            $userBilling = UserBillings::findFirst([
+                'conditions' => 'user_id = :userId:',
+                'bind' => ['userId' => $userId]
+            ]);
+
+
+            if ($userBilling->location_id !== $data['location_id'] && $userBilling->description !== $data['description']
+                || $userBilling->location_id !== $data['location_id'] || $userBilling->description !== $data['description']
+            ) {
+                $userBilling->location_id = $data['location_id'];
+                $userBilling->description = $data['description'];
+
+                $updateData  = [
+                    'location_id'=>$data['location_id'],
+                    'description'=>$data['description'],
+                ];
+                // Update in elastic
+                $this->elastic->updateBilling($userBilling->id,$updateData);
+
+                $userBilling->update();
+
+            }
+
+
+            $this->db->commit();
+
+
+        } catch (\Exception $exception) {
+            $this->db->rollback();
+            throw new Http403Exception($exception->getMessage(), self::ERROR_BAD_TOKEN, $exception);
+
+        }
+        return null;
+
+    }
+
 
     /**
      * delete
@@ -182,13 +245,6 @@ class UsersService extends AbstractService
             );
         }
 
-        // Administrators check
-        //        if ($loggedId !== $adminId) {
-        //            throw  new ServiceException(
-        //                "User is not authorized",
-        //                self::ERROR_USER_NOT_AUTHORIZED
-        //            );
-        //        }
 
         // Update data in database
         $user = Users::findFirst([
@@ -382,8 +438,22 @@ class UsersService extends AbstractService
     private function isUserAuthorized(int $userId): int
     {
         $loggedId = $this->getLoggedUser();
+        $user = Users::findFirstById($loggedId);
 
-        if ($userId !== $loggedId) {
+        // Administrators check
+        //        if ($loggedId !== $adminId) {
+        //            throw  new ServiceException(
+        //                "User is not authorized",
+        //                self::ERROR_USER_NOT_AUTHORIZED
+        //            );
+        //        }
+
+        if (!$user) {
+            throw  new  ServiceException(
+                "User in not found",
+                self::ERROR_IS_NOT_FOUND
+            );
+        } else if ($userId !== $loggedId) {
             throw  new ServiceException(
                 "User is not authorized",
                 self::ERROR_USER_NOT_AUTHORIZED
