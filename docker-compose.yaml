@@ -36,17 +36,8 @@ services:
       - ./composer.json:/var/www/php/composer.json
       - composer_data:/var/www/php/vendor
 
-
-  redis:
-    image: redis:7.0-alpine
-    container_name: redis
-    volumes:
-      - redis_data:/data
-
-
 # Volumes
 volumes:
-  redis_data:
   composer_data:
 
 networks:

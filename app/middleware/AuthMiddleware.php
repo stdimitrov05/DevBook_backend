@@ -2,6 +2,7 @@
 
 namespace App\Middleware;
 
+use App\Exceptions\HttpExceptions\Http422Exception;
 use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
@@ -18,30 +19,29 @@ use App\Exceptions\HttpExceptions\Http403Exception;
  */
 class AuthMiddleware implements MiddlewareInterface
 {
-//    /**
-//     * Before anything happens
-//     *
-//     * @param Event $event
-//     * @param Micro $app
-//     * @return bool
-//     */
-//    public function beforeHandleRoute(Event $event, Micro $app): bool
-//    {
-//        try {
-//            if ($this->isIgnoreUri($app) === false) {
-//                $app['authService']->verifyToken();
-//            }
-//        } catch (ServiceException $e) {
-//            switch ($e->getCode()) {
-//                case AbstractService::ERROR_BAD_TOKEN:
-//                    throw new Http403Exception($e->getMessage(), $e->getCode(), $e);
-//                default:
-//                    throw new Http500Exception($e->getMessage(), $e->getCode(), $e);
-//            }
-//        }
-//
-//        return true;
-//    }
+    /**
+     * Before anything happens
+     *
+     * @param Event $event
+     * @param Micro $app
+     * @return bool
+     */
+    public function beforeHandleRoute(Event $event, Micro $app): bool
+    {
+        try {
+            if ($this->isIgnoreUri($app) === false) {
+                $app['authService']->verifyToken();
+            }
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_BAD_TOKEN
+                    => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception($e->getMessage(), $e->getCode(), $e),
+            };
+        }
+
+        return true;
+    }
 
     /**
      * Calls the middleware

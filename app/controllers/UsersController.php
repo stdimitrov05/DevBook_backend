@@ -64,7 +64,7 @@ class UsersController extends AbstractController
             $this->throwValidationErrors($messages);
         }
         try {
-            $response = $this->usersService->billing($userId, $data);
+            $response = $this->usersService->billing( $data);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
@@ -90,15 +90,14 @@ class UsersController extends AbstractController
     {
         $file = $this->request->getUploadedFiles();
 
-
         try {
-            $response = $this->usersService->uploadAvatar($userId,$file);
+            $response = $this->usersService->uploadAvatar($file);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
 

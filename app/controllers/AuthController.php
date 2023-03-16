@@ -48,7 +48,8 @@ class AuthController extends AbstractController
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_NOT_EXISTS,
+                AbstractService::ERROR_UNABLE_TO_CREATE,
+                AbstractService::ERROR_BAD_TOKEN,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
@@ -84,11 +85,9 @@ class AuthController extends AbstractController
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_NOT_EXISTS,
                 AbstractService::ERROR_UNABLE_TO_CREATE,
-                AbstractService::ERROR_REDIS_NOT_SET_DATA,
                 AbstractService::ERROR_USER_NOT_ACTIVE,
-                AbstractService::ERROR_ACCOUNT_IS_DELETED,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 AbstractService::ERROR_WRONG_EMAIL_OR_PASSWORD,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -110,9 +109,9 @@ class AuthController extends AbstractController
             $tokens = $this->authService->refreshJwtTokens();
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_JWT_IS_NOT_FOUND,
-                AbstractService::ERROR_HAS_EXPIRED,
-                AbstractService::ERROR_JWT_IN_WHITE_LIST
+                AbstractService::ERROR_BAD_TOKEN,
+                AbstractService::ERROR_UNABLE_TO_DELETE,
+                AbstractService::ERROR_UNABLE_TO_CREATE
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
@@ -145,8 +144,7 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_ACTIVE,
-                AbstractService::ERROR_ACCOUNT_IS_DELETED,
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -160,9 +158,9 @@ class AuthController extends AbstractController
 
     /**
      * emailConfirmAction
-     * @retrun  array
+     * @retrun  null
      */
-    public function emailConfirmAction(): array
+    public function emailConfirmAction()
     {
         $confirmToken = $this->request->getPost();
 
@@ -180,7 +178,7 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
@@ -215,8 +213,9 @@ class AuthController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
-                AbstractService::ERROR_IS_NOT_FOUND,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                AbstractService::ERROR_NOT_FOUND,
+                => new Http404Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
             };
 
@@ -280,12 +279,14 @@ class AuthController extends AbstractController
         }
 
         try {
-            $response = $this->authService->changeForgotPassword((array)$data);
+            $response = $this->authService->changeForgotPassword($data);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
-                AbstractService::ERROR_NOT_EXISTS,
-                AbstractService::ERROR_WRONG_PASSWORD,
+                AbstractService::ERROR_NOT_FOUND,
+                => new Http404Exception($e->getMessage(), $e->getCode(), $e),
+                AbstractService::ERROR_WRONG_EMAIL_OR_PASSWORD,
+                AbstractService::ERROR_TOKEN_HAS_CONFIRMED,
                 AbstractService::ERROR_UNABLE_TO_UPDATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),

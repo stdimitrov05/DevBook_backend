@@ -47,8 +47,15 @@ $di->setShared('security', new Phalcon\Encryption\Security());
 // Redis service
 $di->setShared('redis', function () use ($config) {
     $redis = new \Redis();
-    $redis->connect(getenv('REDIS_HOST'), getenv('REDIS_PORT'));
-    return $redis;
+    try {
+        $redis->connect(
+            $config->redis->redisHost,
+            $config->redis->redisPort
+        );
+        return $redis;
+    } catch (RedisException $exception) {
+        throw  new Exception("Redis: " . $exception->getTraceAsString());
+    }
 });
 
 
@@ -56,11 +63,11 @@ $di->setShared('redis', function () use ($config) {
 $di->setShared('mailer', function () use ($config) {
     $phpMailer = new PHPMailer\PHPMailer\PHPMailer();
     $phpMailer->isSMTP();
-    $phpMailer->SMTPSecure = getenv("SMTPSECURE");
-    $phpMailer->Host = getenv("EMAIL_HOST");
+    $phpMailer->SMTPSecure = $config->mail->emailSmtpSecure;
+    $phpMailer->Host = $config->mail->emailHost;
     $phpMailer->SMTPAuth = true;
-    $phpMailer->Port = getenv("EMAIL_PORT");
-    $phpMailer->Username = getenv("NOREPLY_EMAIL");
+    $phpMailer->Port = $config->mail->emailPort;
+    $phpMailer->Username = $config->mail->noreplyEmail;
     $phpMailer->Password = getenv("NOREPLY_PASSWORD");
 
     return new \App\Lib\Mailer($phpMailer);
@@ -128,5 +135,7 @@ $di->setShared(
 $di->setShared('frontendService', '\App\Services\FrontendService');
 $di->setShared('authService', '\App\Services\AuthService');
 $di->setShared('usersService', '\App\Services\UsersService');
+$di->setShared('redisService', '\App\Services\RedisService');
+$di->setShared('jwt', '\App\Lib\JWT');
 
 return $di;
