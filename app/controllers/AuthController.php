@@ -22,7 +22,7 @@ class AuthController extends AbstractController
 {
 
     /**
-     * signupAction
+     * Signup Action
      * @retrun  null
      */
 
@@ -60,7 +60,7 @@ class AuthController extends AbstractController
     }
 
     /**
-     * loginAction
+     * Login action
      * @return array
      */
     public function loginAction(): array
@@ -81,7 +81,7 @@ class AuthController extends AbstractController
         }
 
         try {
-            $response = $this->authService->login((array)$data);
+            $response = $this->authService->login($data);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
@@ -259,6 +259,7 @@ class AuthController extends AbstractController
     /**
      * changeForgotPasswordAction
      * @retrun array
+     * @throws \Exception
      */
 
     public function changeForgotPasswordAction()

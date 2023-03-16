@@ -31,8 +31,9 @@ class UsersController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_AUTHORIZED,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -121,10 +122,10 @@ class UsersController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_AUTHORIZED,
-                AbstractService::ERROR_ACCOUNT_IS_DELETED,
-                AbstractService::ERROR_UNABLE_TO_DELETE_ACCOUNT,
+                AbstractService::ERROR_ACCOUNT_DELETED,
+                AbstractService::ERROR_UNABLE_TO_DELETE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
 
@@ -165,7 +166,7 @@ class UsersController extends AbstractController
                 AbstractService::ERROR_USER_NOT_AUTHORIZED,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
                 AbstractService::ERROR_BAD_TOKEN,
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
 
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),

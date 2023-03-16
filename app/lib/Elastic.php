@@ -2,7 +2,6 @@
 
 namespace App\Lib;
 
-use App\Models\Countries;
 use App\Services\AbstractService;
 
 class Elastic extends AbstractService
@@ -194,6 +193,28 @@ class Elastic extends AbstractService
             'body' => [
                 'doc' => [
                     'active' => 1 // Replace with the new value you want to set
+                ]
+            ]
+        ];
+        $this->elasticsearch->update($requestBody);
+    }
+
+    /**
+     * updateUserActivateById
+     * @param int $userId
+     * @param string $password
+     * @retrun  null
+     */
+    public function updateUserPassword(int $userId, string $password): void
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'id' => $userId, // Replace with the user ID you want to update
+            'body' => [
+                'doc' => [
+                    'password' => $password // Replace with the new value you want to set
                 ]
             ]
         ];

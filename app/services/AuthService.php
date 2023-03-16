@@ -380,6 +380,7 @@ class AuthService extends AbstractService
                     self::ERROR_NOT_FOUND
                 );
             }
+
             $user = Users::findFirst([
                 'conditions' => 'id = :id:',
                 'bind' => ['id' => $userId]
@@ -404,6 +405,8 @@ class AuthService extends AbstractService
             // Hash new password
             $hashPassword = $this->getDI()->getSecurity()->hash($data['newPassword']);
 
+            // Update to elastic
+            $this->elastic->updateUserPassword($user->id, $hashPassword);
             // Update user password
             $user->password = $hashPassword;
             $user->update();
