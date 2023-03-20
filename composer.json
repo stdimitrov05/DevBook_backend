@@ -3,7 +3,8 @@
     "phpmailer/phpmailer": "v6.7.1",
     "intervention/image": "^2.7",
     "elasticsearch/elasticsearch": "^8.6",
-    "mobiledetect/mobiledetectlib": "^3.74"
+    "mobiledetect/mobiledetectlib": "^3.74",
+    "ext-redis": "*"
   },
   "config": {
     "allow-plugins": {

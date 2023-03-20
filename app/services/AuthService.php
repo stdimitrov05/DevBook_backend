@@ -9,11 +9,9 @@ use App\Models\EmailConfirmations;
 use App\Models\ForgotPassword;
 use App\Models\LoginsFailed;
 use App\Models\Users;
+use mysql_xdevapi\Exception;
 use Phalcon\Db\Column;
-use Phalcon\Encryption\Security\JWT\Builder;
 use Phalcon\Encryption\Security\JWT\Exceptions\ValidatorException;
-use Phalcon\Encryption\Security\JWT\Signer\Hmac;
-use Phalcon\Encryption\Security\JWT\Token\Parser;
 
 /**
  * Business-logic for site frontend
@@ -24,17 +22,11 @@ use Phalcon\Encryption\Security\JWT\Token\Parser;
  */
 class AuthService extends AbstractService
 {
-    // Constants
-    // Redis names SETS
-    private const  usersPrefix = 'users:';
-    private const  jtiPostfix = ':jtis';
-    private const  whiteListPrefix = 'wl_';
-
-
     /**
      * @param array $data
      * @return array
      * @throws ValidatorException
+     * @throws \RedisException
      */
     public function login(array $data): array
     {
@@ -80,7 +72,7 @@ class AuthService extends AbstractService
         $this->checkUserFlags($user);
 
         // Generate JWT
-        $jwtTokens = $this->generateJwtTokens($user->id, $data['remember']);
+        $jwtTokens = $this->jwt->generateTokens($user->id, $data['remember']);
 
         return [
             'accessToken' => $jwtTokens['accessToken'],
@@ -92,87 +84,60 @@ class AuthService extends AbstractService
     /**
      * refreshJwtTokens
      * @retrun array
+     * @throws ValidatorException
+     * @throws \RedisException
      */
     public function refreshJwtTokens(): array
     {
-        $newTokens = [];
+        // Get JWT refresh token from headers
+        $jwt = $this->jwt->getAuthorizationToken();
+        $token = $this->jwt->decode($jwt);
+        $userId = $this->userId();
 
-        // Get jwt (refreshToken) from headers
-        $jwt = $this->getJwtToken();
+        $this->jwt->validateJwt($token);
 
-        // If jwt (refreshToken) is missing
-        if (!$jwt) {
-            throw  new ServiceException(
-                'Jwt token is not found',
-                self::ERROR_JWT_IS_NOT_FOUND
-            );
-        }
+        // Check if jti is in the white list (redis)
+        $jti = $token->getClaims()->getPayload()['jti'];
+        $this->redisService->isJtiInWhiteList($jti);
 
-        // Decode JWT (refreshToken) and getClaims
-        $decodedJWT = $this->decodeJWT($jwt);
-        // From decodedJWT get jti
-        $jti = $decodedJWT->getPayload()['jti'];
-        // From decodedJwt get sub (userId)
-        $userId = $decodedJWT->getPayload()['sub'];
-        // From decodedJwt get expired
-        $exp = $decodedJWT->getPayload()['exp'];
+        $this->redisService->removeJti($jti, $userId);
 
-        // Is expired
-        if ($exp < time()) {
-            throw  new ServiceException(
-                'Token has expired',
-                self::ERROR_HAS_EXPIRED
-            );
-        }
+        $tokenExpire = $token->getClaims()->getPayload()['exp'] - $token->getClaims()->getPayload()['nbf'];
+        $remember = $tokenExpire > $this->config->auth->refreshTokenExpire ? 1 : 0;
 
-        // Check jwt (refreshToken) in redis
-        $jwtIsExist = $this->checkJwtById($userId, $jti);
+        $newTokens = $this->jwt->generateTokens($userId, $remember);
 
-        if ($jwtIsExist === false) {
-            throw  new ServiceException(
-                'Token is not found',
-                self::ERROR_JWT_IS_NOT_FOUND
-            );
-        }
-
-        // Remove jti form redis (in SETS and wl_$jti)
-        $isRemove = $this->removeJtiInRedis($jti, $userId);
-
-        if ($isRemove !== null) {
-            throw  new ServiceException(
-                'Token can`t remove in redis',
-                self::ERROR_JWT_CANT_REMOVE
-            );
-        }
-
-        $generateToken = $this->generateJwtTokens($userId);
-
-        $newTokens = [
-            'accessToken' => $generateToken['accessToken'],
-            'refreshToken' => $generateToken['refreshToken'],
+        return [
+            'accessToken' => $newTokens['accessToken'],
+            'refreshToken' => $newTokens['refreshToken'],
         ];
-
-
-        return $newTokens;
-
     }
 
     /**
-     * Decode JWT tokens
-     * @params string $token
-     * @retrun  object
-     * 'exp' => int 1680179383 -> $iat + $this->config->auth->accessTokenExpire
-     * 'jti' => string 'dCTf6o3na2Ut3ncYu4ZQ6vEL2Kylt7fVDtAWNGfluWw=' -> setID
-     * 'iss' => string 'domain' -> $this->config->application->domain
-     * 'iat' => int 1677587383  -> time()
-     * 'sub' => string '1'  -> UserID
-     */
-    public function decodeJWT(string $token): object
+     * Get user ID
+     * @retrun int
+     * */
+    public function userId(): int
     {
-        // Parse the token
-        $parser = new Parser();
+        $jwtToken = $this->jwt->getAuthorizationToken();
+        return (int)$this->jwt->decode($jwtToken)->getClaims()->getPayload()['sub'];
+    }
 
-        return $parser->parse($token)->getClaims();
+
+    /**
+     * Verify token
+     *
+     * @retrun bool
+     *
+     *
+     * @throws ValidatorException
+     */
+    public function verifyToken(): bool
+    {
+        $jwt = $this->jwt->getAuthorizationToken();
+        $token = $this->jwt->decode($jwt);
+        $this->jwt->validateJwt($token);
+        return true;
     }
 
     /**
@@ -215,177 +180,6 @@ class AuthService extends AbstractService
         return null;
     }
 
-
-    /**
-     * Get authorization header
-     * @return false|string
-     */
-    public function getJwtToken(): bool|string
-    {
-        // Get jwt (refreshToken) from headers
-        $authorizationHeader = $this->request->getHeader('Authorization');
-
-        if ($authorizationHeader and preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
-            return $matches[1];
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * generateJwtTokens
-     * Generate access and refresh jwt tokens
-     * @param int $userId
-     * @param int $remember
-     * @return array
-     * @throws ValidatorException
-     * @retrun  array
-     */
-    private function generateJwtTokens(int $userId, int $remember = 0): array
-    {
-        // Generate jti
-        $jti = base64_encode(openssl_random_pseudo_bytes(32));
-        // Defaults to 'sha512'
-        $signer = new Hmac('sha512');
-        $iat = time();
-        $iss = $this->config->application->domain;
-        $exp = $iat + $this->config->auth->accessTokenExpire;
-
-        // Create accessToken with expire 2 minutes
-        $accessToken = (new Builder($signer))
-            ->setExpirationTime($exp)
-            ->setPassphrase($this->config->auth->key)
-            ->setNotBefore($iat)
-            ->setSubject($userId)
-            ->setIssuer($iss)
-            ->setIssuedAt($iat)
-            // Get build string with all parts
-            ->getToken()
-            // Get current jwt (accessToken)
-            ->getToken();
-
-        // Longer expiration time if user click remember me
-        // Set refresh token life :  1 week or 30 days
-        $refreshExpire = $remember == 1
-            ? $this->config->auth->refreshTokenRememberExpire
-            : $this->config->auth->refreshTokenExpire;
-
-        // Create refreshToken
-        $refreshToken = (new Builder($signer))
-            ->setExpirationTime($iat + $refreshExpire)
-            ->setPassphrase($this->config->auth->key)
-            ->setNotBefore($iat)
-            ->setId($jti)
-            ->setIssuer($iss)
-            ->setIssuedAt($iat)
-            ->setSubject($userId)
-            // Get build string with all parts
-            ->getToken()
-            // Get current jwt (accessToken)
-            ->getToken();
-
-        // If accessToken or refreshToken has not created
-        if (!$accessToken || !$refreshToken) {
-            throw  new ServiceException(
-                'Jwt tokens can`t create',
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
-
-        // Set jwt tokens in redis
-        $isInRedis = $this->setJtiInRedis($userId, $jti, $iat + $refreshExpire);
-
-        if ($isInRedis !== null) {
-            throw  new ServiceException(
-                'Unable to save jti',
-                self::ERROR_UNABLE_TO_CREATE
-            );
-        }
-
-        return [
-            "accessToken" => $accessToken,
-            "refreshToken" => $refreshToken,
-            'expireAt' => $iat + $refreshExpire,
-        ];
-
-    }
-
-
-    /**
-     * setJtiInRedis
-     * Set sets in  users: $userId : tokens on redis
-     * @param int $userId
-     * @param string $jti
-     * @param int $expire
-     * @return null
-     */
-    private function setJtiInRedis(int $userId, string $jti, int $expire)
-    {
-        $redis = $this->redis;
-
-        $setsName = self::usersPrefix . $userId . self::jtiPostfix;
-        (string)$wl = self::whiteListPrefix . $jti;
-
-        // Store jti in redis SETS
-        $redis->sAdd($setsName, $jti);
-        $redis->expire($setsName, $expire + 60);
-        // Whitelist refresh token jti
-        $redis->set($wl, 1);
-        $redis->expire($wl, $expire + 60);
-
-
-        return null;
-    }
-
-    /**
-     * removeJtiInRedis
-     * @description  Remove from users:$userId:jti and remove to whitelist
-     * @param string $jti
-     * @param int $userId
-     * @retrun null
-     */
-
-    private function removeJtiInRedis(string $jti, int $userId)
-    {
-        $redis = $this->redis;
-
-        $setsName = self::usersPrefix . $userId . self::jtiPostfix;
-        (string)$wl = self::whiteListPrefix . $jti;
-
-        // Set in sets jwt
-        $redis->SREM($setsName, $jti);
-        // WhiteList refreshToken
-        $redis->del($wl);
-
-        return null;
-    }
-
-
-    /**
-     * checkJwtById
-     * @description  Check jwt (refreshToken id ) in redis
-     * @param string $jti
-     * @param int $userId
-     * @retrun bool
-     */
-    private function checkJwtById(int $userId, string $jti): bool
-    {
-        (bool)$isExist = false;
-
-        $redis = $this->redis;
-        // Call whitelist : wl_$jti
-        (string)$wl = self::whiteListPrefix . $jti;
-        // Call SETS : users:$userId:jti
-        (string)$setsName = self::usersPrefix . $userId . self::jtiPostfix;
-        // Check jti (refreshToken id) in redis
-        $setsJti = $redis->SISMEMBER($setsName, $jti);
-        $isWl = $redis->get($wl);
-
-        $isWl == 1 && $setsJti == true ? ($isExist = true) : $isExist;
-
-        return $isExist;
-
-    }
 
     /**
      * Implements login throttling
@@ -439,7 +233,7 @@ class AuthService extends AbstractService
         if ($user->deleted_at != null) {
             throw new ServiceException(
                 'The user is deleted',
-                self::ERROR_ACCOUNT_IS_DELETED
+                self::ERROR_ACCOUNT_DELETED
             );
         }
 
@@ -455,9 +249,9 @@ class AuthService extends AbstractService
     /**
      * emailConfirm
      * @param string $token
-     * @return  array
+     * @return  null
      */
-    public function emailConfirm(string $token): array
+    public function emailConfirm(string $token)
     {
         // Start a transaction
         $this->db->begin();
@@ -469,7 +263,7 @@ class AuthService extends AbstractService
             if (!$email) {
                 throw  new ServiceException(
                     "Token is not found",
-                    self::ERROR_IS_NOT_FOUND
+                    self::ERROR_NOT_FOUND
                 );
             } elseif ($email->confirmed === 1) {
                 throw  new ServiceException(
@@ -491,21 +285,14 @@ class AuthService extends AbstractService
 
             // Update activate in elastic
             $this->elastic->updateUserActivateById($user->id);
-            // Generate jwt tokens for 1 w
-            $jwtTokens = $this->generateJwtTokens($user->id);
-
 
             $this->db->commit();
-
-            return [
-                "accessToken" => $jwtTokens['accessToken'],
-                "refreshToken" => $jwtTokens['refreshToken']
-            ];
 
         } catch (\Exception $e) {
             $this->db->rollback();
             throw new Http403Exception($e->getMessage(), self::ERROR_BAD_TOKEN, $e);
         }
+        return null;
 
     }
 
@@ -525,7 +312,7 @@ class AuthService extends AbstractService
         if (!$email) {
             throw  new ServiceException(
                 "User is not found",
-                self::ERROR_IS_NOT_FOUND
+                self::ERROR_NOT_FOUND
             );
         }
         // Get user data
@@ -537,7 +324,7 @@ class AuthService extends AbstractService
         if (!$user) {
             throw  new ServiceException(
                 "User email is not found",
-                self::ERROR_IS_NOT_FOUND
+                self::ERROR_NOT_FOUND
             );
         }
 
@@ -583,48 +370,68 @@ class AuthService extends AbstractService
      */
     public function changeForgotPassword(array $data)
     {
-        $userId = ForgotPassword::findFirstByToken($data['token'])->user->id;
+        try {
+            $this->db->begin();
+            $userId = ForgotPassword::findFirstByToken($data['token'])->user->id;
 
-        if (!$userId) {
-            throw new ServiceException(
-                "User is not found",
-                self::ERROR_IS_NOT_FOUND
-            );
+            if (!$userId) {
+                throw new ServiceException(
+                    "User is not found",
+                    self::ERROR_NOT_FOUND
+                );
+            }
+
+            $user = Users::findFirst([
+                'conditions' => 'id = :id:',
+                'bind' => ['id' => $userId]
+            ]);
+
+            // Check the password
+            if (!$this->security->checkHash($data['oldPassword'], $user->password)) {
+                throw new ServiceException(
+                    'Wrong old password',
+                    self::ERROR_WRONG_EMAIL_OR_PASSWORD
+                );
+            }
+
+            // The two passwords do not match
+            if ($data['newPassword'] !== $data['currentPassword']) {
+                throw new ServiceException(
+                    'The two passwords do not match',
+                    self::ERROR_WRONG_EMAIL_OR_PASSWORD
+                );
+            }
+
+            // Hash new password
+            $hashPassword = $this->getDI()->getSecurity()->hash($data['newPassword']);
+
+            // Update to elastic
+            $this->elastic->updateUserPassword($user->id, $hashPassword);
+            // Update user password
+            $user->password = $hashPassword;
+            $user->update();
+
+            $forgotPassword = ForgotPassword::findFirst([
+                'conditions' => 'user_id = :userId:',
+                'bind' => ['userId' => $user->id]
+            ]);
+
+            if ($forgotPassword->confirmed === 1) {
+                throw new ServiceException(
+                    "Token is confirmed",
+                    self::ERROR_TOKEN_HAS_CONFIRMED
+                );
+            }
+
+            $forgotPassword->confirmed = 1;
+            $forgotPassword->update();
+
+            $this->db->commit();
+        } catch (Exception $exception) {
+            $this->db->rollback();
+            throw new \Exception($exception->getMessage());
         }
-        $user = Users::findFirst([
-            'conditions' => 'id = :id:',
-            'bind' => ['id' => $userId]
-        ]);
 
-        // Check the password
-        if (!$this->security->checkHash($data['oldPassword'], $user->password)) {
-            throw new ServiceException(
-                'Wrong old password',
-                self::ERROR_WRONG_PASSWORD
-            );
-        }
-
-        // The two passwords do not match
-        if ($data['newPassword'] !== $data['currentPassword']) {
-            throw new ServiceException(
-                'The two passwords do not match',
-                self::ERROR_WRONG_PASSWORD
-            );
-        }
-
-        // Hash new password
-        $hashPassword = $this->getDI()->getSecurity()->hash($data['newPassword']);
-
-        // Update user password
-        $user->password = $hashPassword;
-        $isUpdate = $user->update();
-
-        if ($isUpdate !== true) {
-            throw  new ServiceException(
-                "Unable to update",
-                self::ERROR_UNABLE_TO_UPDATE
-            );
-        }
         return null;
 
     }

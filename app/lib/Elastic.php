@@ -2,7 +2,6 @@
 
 namespace App\Lib;
 
-use App\Models\Countries;
 use App\Services\AbstractService;
 
 class Elastic extends AbstractService
@@ -93,6 +92,43 @@ class Elastic extends AbstractService
     }
 
     /**
+     * createAvatarIndex
+     * @uses  \Elastic\Elasticsearch\ClientBuilder
+     */
+    public function createAvatarIndex(): void
+    {
+        // Create params
+        $params = [
+            'index' => 'avatars',
+            'body' => [
+                'mappings' => [
+                    'properties' => [
+                        'id' => [
+                            'type' => 'integer'
+                        ],
+                        'user_id' => [
+                            'type' => 'integer'
+                        ],
+                        'name' => [
+                            'type' => 'keyword'
+                        ],
+                        'type' => [
+                            'type' => 'keyword'
+                        ],
+                        'size' => [
+                            'type' => 'integer'
+                        ],
+                        'path' => [
+                            'type' => 'keyword',
+                        ],
+                    ]
+                ]
+            ]
+        ];
+
+        $this->elasticsearch->indices()->create($params);
+    }
+    /**
      * insertUserBilling
      * @param int $billingId
      * @param array $data
@@ -164,6 +200,73 @@ class Elastic extends AbstractService
     }
 
     /**
+     * updateUserActivateById
+     * @param int $userId
+     * @param string $password
+     * @retrun  null
+     */
+    public function updateUserPassword(int $userId, string $password): void
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'id' => $userId, // Replace with the user ID you want to update
+            'body' => [
+                'doc' => [
+                    'password' => $password // Replace with the new value you want to set
+                ]
+            ]
+        ];
+        $this->elasticsearch->update($requestBody);
+    }
+
+    /**
+     * updateBilling
+     * @param int $billingId
+     * @param array $data
+     * @retrun  null
+     */
+    public function updateBilling(int $billingId, array $data): void
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'user_billing',
+            'id'=>$billingId,
+            'body' => [
+                'doc' => [
+                    'location_id' => $data['location_id'], // Replace with the new value you want to set
+                    'description' => $data['description'], // Replace with the new value you want to set
+                ]
+            ]
+        ];
+        $this->elasticsearch->update($requestBody);
+    }
+
+
+    /**
+     * updateUsername
+     * @param int $userId
+     * @param string $username
+     * */
+    public function updateUsername(int $userId, string $username) : void
+    {
+        $requestBody = [];
+
+        $requestBody = [
+            'index' => 'users',
+            'id' => $userId, // Replace with the user ID you want to update
+            'body' => [
+                'doc' => [
+                    'username' => $username // Replace with the new value you want to set
+                ]
+            ]
+        ];
+        $this->elasticsearch->update($requestBody);
+    }
+
+    /**
      * deleteUserById
      * @param int $userId
      * @return  bool
@@ -187,45 +290,6 @@ class Elastic extends AbstractService
 
         return $search_results['_shards']['successful'] === 1 ? true : false;
 
-    }
-
-
-    /**
-     * createAvatarIndex
-     * @uses  \Elastic\Elasticsearch\ClientBuilder
-     */
-    public function createAvatarIndex(): void
-    {
-        // Create params
-        $params = [
-            'index' => 'avatars',
-            'body' => [
-                'mappings' => [
-                    'properties' => [
-                        'id' => [
-                            'type' => 'integer'
-                        ],
-                        'user_id' => [
-                            'type' => 'integer'
-                        ],
-                        'name' => [
-                            'type' => 'keyword'
-                        ],
-                        'type' => [
-                            'type' => 'keyword'
-                        ],
-                        'size' => [
-                            'type' => 'integer'
-                        ],
-                        'path' => [
-                            'type' => 'keyword',
-                        ],
-                    ]
-                ]
-            ]
-        ];
-
-        $this->elasticsearch->indices()->create($params);
     }
 
 
@@ -254,38 +318,6 @@ class Elastic extends AbstractService
     }
 
     /**
-     * getAvatarById
-     * @param int $userId
-     * @retrun  string | null
-     */
-
-    public function getAvatarById(int $userId): string|null
-    {
-        $requestBody = [];
-
-        $requestBody = [
-            'index' => 'avatars',
-            'body' => [
-                '_source' => false,
-                'query' => [
-                    'match' => [
-                        'user_id' => $userId // Replace with the user ID you want to get avatars for
-                    ]
-                ],
-                'fields' => ['path']
-            ]
-        ];
-
-        $response = $this->elasticsearch->search($requestBody);
-        $avatars = "";
-        foreach ($response['hits']['hits'] as $hit) {
-            $avatars = $hit['fields']['path'][0];
-        }
-
-        return !$avatars ? null : $avatars;
-    }
-
-    /**
      * getUserData
      * @param int $userId
      * @retrun  array
@@ -310,15 +342,18 @@ class Elastic extends AbstractService
         ];
 
         $response = $this->elasticsearch->msearch($requestBody);
+        // Get response length
         $count = $response['responses'][0]['_shards']['total'];
         $user = [];
-
+        // Mapping response data
         for ($i = 0; $i < $count; $i++) {
             foreach ($response['responses'][$i]['hits']['hits'] as $hit) {
                 $user[$hit['_index']] = $hit['_source'];
+
             }
         }
-        return  $user;
+
+        return $user;
     }
 
 }

@@ -28,7 +28,7 @@ $userCollection = new \Phalcon\Mvc\Micro\Collection();
 $userCollection->setPrefix(API_VERSION . '/users');
 $userCollection->setHandler('\App\Controllers\UsersController', true);
 
-// User Details for home page
+// Get user details
 $userCollection->get(
     '/{userId:[1-9][0-9]*}/details',
     'userDetailsAction'
@@ -39,6 +39,13 @@ $userCollection->post(
     '/{userId:[1-9][0-9]*}/billing',
     'billingAction'
 );
+
+// Update user account
+$userCollection->put(
+    '/{userId:[1-9][0-9]*}/edit/details',
+    'updateDetailsAction'
+);
+
 
 // Delete account
 $userCollection->delete(

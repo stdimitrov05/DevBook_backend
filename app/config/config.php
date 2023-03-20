@@ -23,9 +23,19 @@ return new \Phalcon\Config\Config(
             'publicUrl' => "http://" . getenv("DOMAIN"),
             'mediaUrl' => "http://devbook.test/images/tools/",
         ],
+        'redis' => [
+            'redisHost' => getenv('REDIS_HOST'),
+            'redisPort' => getenv('REDIS_PORT'),
+            'usersPrefix' => getenv('REDIS_USERS_PREFIX'),
+            'jtiPostfix' => getenv('REDIS_JTI_POSTFIX'),
+            'whiteListPrefix' => getenv('REDIS_WHITE_LIST_PREFIX')
+        ],
         'mail' => [
             'noreplyEmail' => getenv('NOREPLY_EMAIL'),
-            'noreplyName' => getenv('NOREPLY_NAME')
+            'noreplyName' => getenv('NOREPLY_NAME'),
+            'emailHost' => getenv('EMAIL_HOST'),
+            'emailPort' => getenv('EMAIL_PORT'),
+            'emailSmtpSecure' => getenv('SMTPSECURE'),
         ],
         'auth' => [
             'key' => getenv('JWT_KEY'),
@@ -37,8 +47,8 @@ return new \Phalcon\Config\Config(
                 '/countries',
                 '/signup',
                 '/login',
-                '/forgotPassword',
-                '/check/forgotPassword/token',
+                '/forgot-password',
+                '/check/forgot-password/token',
                 '/users/email/confirm',
                 'regex:' . '/users/{userId:[1-9][0-9]*}/avatar/upload',
                 '/users/resend/email/confirm',

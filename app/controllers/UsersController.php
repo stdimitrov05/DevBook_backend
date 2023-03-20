@@ -9,6 +9,7 @@ use App\Exceptions\HttpExceptions\Http500Exception;
 use App\Exceptions\ServiceException;
 use App\Services\AbstractService;
 use App\Validation\BillingValidation;
+use App\Validation\EditUserDetailsValidation;
 use App\Validation\SignupValidation;
 
 /**
@@ -30,8 +31,9 @@ class UsersController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_AUTHORIZED,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
@@ -63,7 +65,7 @@ class UsersController extends AbstractController
             $this->throwValidationErrors($messages);
         }
         try {
-            $response = $this->usersService->billing($userId, $data);
+            $response = $this->usersService->billing( $data);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
@@ -89,15 +91,14 @@ class UsersController extends AbstractController
     {
         $file = $this->request->getUploadedFiles();
 
-
         try {
-            $response = $this->usersService->uploadAvatar($userId,$file);
+            $response = $this->usersService->uploadAvatar($file);
 
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_UNABLE_TO_CREATE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
 
@@ -121,11 +122,51 @@ class UsersController extends AbstractController
         } catch (ServiceException $e) {
             throw match ($e->getCode()) {
                 AbstractService::ERROR_USER_NOT_AUTHORIZED,
-                AbstractService::ERROR_ACCOUNT_IS_DELETED,
-                AbstractService::ERROR_UNABLE_TO_DELETE_ACCOUNT,
+                AbstractService::ERROR_ACCOUNT_DELETED,
+                AbstractService::ERROR_UNABLE_TO_DELETE,
                 => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                AbstractService::ERROR_IS_NOT_FOUND,
+                AbstractService::ERROR_NOT_FOUND,
                 AbstractService::ERROR_BAD_TOKEN,
+                => new Http404Exception($e->getMessage(), $e->getCode(), $e),
+
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+        }
+
+        return $response;
+    }
+
+    /**
+     * updateDetailsAction
+     * @param int $userId
+     * @retrun  null
+     * */
+    public function updateDetailsAction(int $userId)
+    {
+        $data = [];
+
+        // Collect and trim request params
+        foreach ($this->request->getPost() as $key => $value) {
+            $data[$key] = $this->request->getPost($key, ['string', 'trim']);
+        }
+
+        // Start validation
+        $validation = new EditUserDetailsValidation();
+        $messages = $validation->validate($data);
+
+        if (count($messages)) {
+            $this->throwValidationErrors($messages);
+        }
+
+        try {
+            $response = $this->usersService->updateDetails($userId, $data);
+
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_USER_NOT_AUTHORIZED,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                AbstractService::ERROR_BAD_TOKEN,
+                AbstractService::ERROR_ACCOUNT_DELETED,
                 => new Http404Exception($e->getMessage(), $e->getCode(), $e),
 
                 default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
