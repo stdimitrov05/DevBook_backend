@@ -39,6 +39,7 @@ services:
 
   redis:
     image: redis:7.0-alpine
+    restart: unless-stopped
     container_name: redis
     volumes:
       - redis_data:/data
@@ -51,4 +52,5 @@ volumes:
 
 networks:
   default:
-    name: docker_network
+#    name: docker_network
+     name: MonyBeby
