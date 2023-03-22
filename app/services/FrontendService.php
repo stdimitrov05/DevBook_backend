@@ -20,15 +20,15 @@ class FrontendService extends AbstractService
     }
 
     /**
-     * @retrun array $countries
+     * @retrun array $locations
      * */
-    public function countries(): array
+    public function locations(): array
     {
-        $sql = "Select * FROM countries";
+        $sql = "Select * FROM locations";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
-        $countries = $stmt->fetchAll();
+        $locations = $stmt->fetchAll();
 
-        return !$countries ? [] : $countries;
+        return !$locations ? [] : $locations;
     }
 }

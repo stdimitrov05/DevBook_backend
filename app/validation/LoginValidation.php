@@ -20,10 +20,6 @@ class LoginValidation extends Validation
                 new PresenceOf([
                     'message' => 'Email or username is required.',
                     'cancelOnFail' => true
-                ]),
-                new Email([
-                    'message' => 'Enter a valid email.',
-                    'cancelOnFail' => true
                 ])
 
             ]

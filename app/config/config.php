@@ -1,14 +1,15 @@
 <?php
 return new \Phalcon\Config\Config(
     [
-        'database' => [
-            'adapter' => getenv('DATABASE_ADAPTER'),
-            'host' => getenv('DATABASE_HOST'),
-            'username' => getenv('DATABASE_USERNAME'),
-            'password' => getenv('DATABASE_PASSWORD'),
-            'dbname' => getenv('DATABASE_NAME'),
-            'charset' => getenv('DATABASE_CHARSET'),
-            'collation' => getenv('DATABASE_COLLATION')
+        'db' => [
+            'adapter' => getenv('DB_ADAPTER'),
+            'host' => getenv('DB_HOST'),
+            'port' => getenv('DB_PORT'),
+            'username' => getenv('DB_USERNAME'),
+            'password' => getenv('DB_PASSWORD'),
+            'dbname' => getenv('DB_NAME'),
+            'charset' => getenv('DB_CHARSET'),
+            'collation' => getenv('DB_COLLATION')
         ],
         'application' => [
             'logInDb' => true,
@@ -23,9 +24,19 @@ return new \Phalcon\Config\Config(
             'publicUrl' => "http://" . getenv("DOMAIN"),
             'mediaUrl' => "http://devbook.test/images/tools/",
         ],
+        'redis' => [
+            'redisHost' => getenv('REDIS_HOST'),
+            'redisPort' => getenv('REDIS_PORT'),
+            'usersPrefix' => getenv('REDIS_USERS_PREFIX'),
+            'jtiPostfix' => getenv('REDIS_JTI_POSTFIX'),
+            'whiteListPrefix' => getenv('REDIS_WHITE_LIST_PREFIX')
+        ],
         'mail' => [
             'noreplyEmail' => getenv('NOREPLY_EMAIL'),
-            'noreplyName' => getenv('NOREPLY_NAME')
+            'noreplyName' => getenv('NOREPLY_NAME'),
+            'emailHost' => getenv('EMAIL_HOST'),
+            'emailPort' => getenv('EMAIL_PORT'),
+            'emailSmtpSecure' => getenv('SMTPSECURE'),
         ],
         'auth' => [
             'key' => getenv('JWT_KEY'),
@@ -34,12 +45,13 @@ return new \Phalcon\Config\Config(
             'refreshTokenRememberExpire' => getenv('JWT_REFRESH_TOKEN_REMEMBER_EXPIRE'),
             'ignoreUri' => [
                 '/',
-                '/countries',
+                '/locations',
                 '/signup',
                 '/login',
-                '/forgotPassword',
-                '/check/forgotPassword/token',
+                '/forgot-password',
+                '/check/forgot-password/token',
                 '/users/email/confirm',
+                'regex:' . '/users/{userId:[1-9][0-9]*}/avatar/upload',
                 '/users/resend/email/confirm',
                 '/forgot-password/change-password',
             ]
