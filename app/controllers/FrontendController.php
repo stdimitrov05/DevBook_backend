@@ -27,13 +27,13 @@ class FrontendController extends AbstractController
     }
 
     /**
-     * GetCountries
+     * Get locations
      * @return array
      */
-    public function getCountriesAction(): array
+    public function getLocations(): array
     {
         try {
-            $response = $this->frontendService->countries();
+            $response = $this->frontendService->locations();
 
         } catch (ServiceException $e) {
             throw new Http500Exception('Internal Server Error', $e->getCode(), $e);

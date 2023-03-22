@@ -38,8 +38,10 @@ services:
 
 # Volumes
 volumes:
+  redis_data:
   composer_data:
 
 networks:
   default:
-    name: docker_network
+#    name: docker_network
+    name: MonyBeby

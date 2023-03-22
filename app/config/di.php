@@ -111,12 +111,12 @@ $di->setShared(
 
         $connection = new Mysql(
             [
-                "host" => $config->database->host,
-                "username" => $config->database->username,
-                "password" => $config->database->password,
-                "dbname" => $config->database->dbname,
-                "charset" => $config->database->charset,
-                "collation" => $config->database->collation,
+                "host" => $config->db->host,
+                "username" => $config->db->username,
+                "password" => $config->db->password,
+                "dbname" => $config->db->dbname,
+                "charset" => $config->db->charset,
+                "collation" => $config->db->collation,
                 'options' => [
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
