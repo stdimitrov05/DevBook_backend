@@ -29,6 +29,7 @@ abstract class AbstractService extends \Phalcon\DI\Injectable
     const  ERROR_UNABLE_TO_CREATE = 11010;
     const  ERROR_UNABLE_TO_DELETE = 11020;
     const ERROR_UNABLE_TO_UPDATE = 11030;
+    const ERROR_UNABLE_TO_STORE = 11040;
 
     // Users errors
     const ERROR_USER_NOT_ACTIVE = 12000;

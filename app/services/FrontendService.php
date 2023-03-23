@@ -20,11 +20,28 @@ class FrontendService extends AbstractService
     }
 
     /**
-     * @retrun array $locations
+     * Check locationId for exist
+     * @param int $locationId
+     * @return bool
      * */
-    public function locations(): array
+    public function locationIdExists(int $locationId): bool
     {
-        $sql = "Select * FROM locations";
+        $sql = "SELECT location_id FROM locations WHERE location_id=:locationId";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam("locationId", $locationId, \PDO::PARAM_INT);
+        $stmt->execute();
+        $locationId = $stmt->fetchColumn();
+
+        return !empty($locationId);
+    }
+
+    /**
+     * Get locations for register page
+     * @retrun array
+     * */
+    public function getLocations(): array
+    {
+        $sql = "SELECT id, state, city, country FROM locations ";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         $locations = $stmt->fetchAll();

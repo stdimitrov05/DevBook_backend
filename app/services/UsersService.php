@@ -26,7 +26,11 @@ class UsersService extends AbstractService
      */
     public function create(array $data): array
     {
+        $ip = $this->request->getClientAddress();
+        $ip = empty($ip) ? $ip = "25.63.116.221" : $ip;
+        $encodedIp = Helper::hashIpAddressToVarbinary($ip);
         $user = new Users();
+        $user->ip_address = $encodedIp;
         $user->assign($data);
         $isCreated = $user->create();
 
@@ -36,6 +40,7 @@ class UsersService extends AbstractService
                 self::ERROR_UNABLE_TO_CREATE
             );
         }
+
         return [
             "userId" => $user->id
         ];

@@ -19,29 +19,29 @@ use App\Exceptions\HttpExceptions\Http403Exception;
  */
 class AuthMiddleware implements MiddlewareInterface
 {
-    /**
-     * Before anything happens
-     *
-     * @param Event $event
-     * @param Micro $app
-     * @return bool
-     */
-    public function beforeHandleRoute(Event $event, Micro $app): bool
-    {
-        try {
-            if ($this->isIgnoreUri($app) === false) {
-                $app['authService']->verifyToken();
-            }
-        } catch (ServiceException $e) {
-            throw match ($e->getCode()) {
-                AbstractService::ERROR_BAD_TOKEN
-                    => new Http422Exception($e->getMessage(), $e->getCode(), $e),
-                default => new Http500Exception($e->getMessage(), $e->getCode(), $e),
-            };
-        }
-
-        return true;
-    }
+//    /**
+//     * Before anything happens
+//     *
+//     * @param Event $event
+//     * @param Micro $app
+//     * @return bool
+//     */
+//    public function beforeHandleRoute(Event $event, Micro $app): bool
+//    {
+//        try {
+//            if ($this->isIgnoreUri($app) === false) {
+//                $app['authService']->verifyToken();
+//            }
+//        } catch (ServiceException $e) {
+//            throw match ($e->getCode()) {
+//                AbstractService::ERROR_BAD_TOKEN
+//                    => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+//                default => new Http500Exception($e->getMessage(), $e->getCode(), $e),
+//            };
+//        }
+//
+//        return true;
+//    }
 
     /**
      * Calls the middleware
