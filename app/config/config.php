@@ -13,10 +13,10 @@ return new \Phalcon\Config\Config(
         ],
         'application' => [
             'logInDb' => true,
-            'migrationsDir' => APP_PATH.'/migrations',
+            'migrationsDir' => APP_PATH . '/migrations',
             'migrationsTsBased' => true,
-            'controllersDir' =>APP_PATH. "/controllers/",
-            'modelsDir' => APP_PATH. "/models/",
+            'controllersDir' => APP_PATH . "/controllers/",
+            'modelsDir' => APP_PATH . "/models/",
             'emailsDir' => APP_PATH . '/views/emails/',
             'logsDir' => BASE_PATH . '/tmp/logs/',
             'baseUri' => "/",
@@ -29,6 +29,7 @@ return new \Phalcon\Config\Config(
             'redisPort' => getenv('REDIS_PORT'),
             'usersPrefix' => getenv('REDIS_USERS_PREFIX'),
             'jtiPostfix' => getenv('REDIS_JTI_POSTFIX'),
+            'csrfPrefix' => getenv('REDIS_CSRF_PREFIX'),
             'whiteListPrefix' => getenv('REDIS_WHITE_LIST_PREFIX')
         ],
         'mail' => [
@@ -47,13 +48,6 @@ return new \Phalcon\Config\Config(
                 '/',
                 '/locations',
                 '/signup',
-                '/login',
-                '/forgot-password',
-                '/check/forgot-password/token',
-                '/users/email/confirm',
-                'regex:' . '/users/{userId:[1-9][0-9]*}/avatar/upload',
-                '/users/resend/email/confirm',
-                '/forgot-password/change-password',
             ]
         ],
     ]

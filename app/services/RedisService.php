@@ -109,4 +109,43 @@ class RedisService extends AbstractService
         }
     }
 
+    /**
+     * Store csrf keys in redis
+     * @param string $csrf
+     * @param ?string $captcha
+     * @throws \RedisException
+     */
+    public function storeCsrf(string $csrf, ?string $captcha = null): void
+    {
+        $csrf = $this->config->redis->csrfPrefix . $csrf;
+        $expire = 120; # 2 min
+
+        // Store captcha as value or one if missing
+        $captcha = empty($captcha) ? 1 : $captcha;
+
+        // Store csrf token key with captcha code value
+        $this->redis->set($csrf, $captcha, $expire);
+    }
+
+    /**
+     * Verify csrf token and captcha in redis
+     * @param string $csrf
+     * @param ?string $captcha
+     * @return bool
+     * @throws \RedisException
+     */
+    public function verifyCsrfAndCaptcha(string $csrf, ?string $captcha = null): bool
+    {
+        $csrfKey = $this->config->redis->csrfPrefix . $csrf;
+        $csrf = $this->redis->get($csrfKey);
+
+        if (!$csrf) return false;
+
+        if (!empty($captcha) && $captcha != $csrf) {
+            return false;
+        }
+
+        return true;
+    }
+
 }

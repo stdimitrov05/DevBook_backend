@@ -14,7 +14,7 @@ class FrontendController extends AbstractController
      * Index
      * @return array
      */
-    public function indexAction(): array
+    public function index(): array
     {
         try {
             $response = $this->frontendService->index();
@@ -28,12 +28,11 @@ class FrontendController extends AbstractController
 
     /**
      * Get locations
-     * @return array
-     */
+     * */
     public function getLocations(): array
     {
         try {
-            $response = $this->frontendService->locations();
+            $response = $this->frontendService->getLocations();
 
         } catch (ServiceException $e) {
             throw new Http500Exception('Internal Server Error', $e->getCode(), $e);
@@ -42,4 +41,20 @@ class FrontendController extends AbstractController
         return $response;
     }
 
+    /**
+     * Refresh captcha and csrf
+     * @return array
+     * */
+
+    public function captchaRefresh(): array
+    {
+        try {
+            $response = $this->authService->getCaptcha();
+
+        } catch (ServiceException $e) {
+            throw new Http500Exception('Internal Server Error', $e->getCode(), $e);
+        }
+
+        return $response;
+    }
 }

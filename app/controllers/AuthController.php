@@ -26,7 +26,7 @@ class AuthController extends AbstractController
      * @retrun  null
      */
 
-    public function signupAction(): array
+    public function signup(): array
     {
         $data = [];
 
@@ -59,5 +59,25 @@ class AuthController extends AbstractController
         return $response;
     }
 
+    /**
+     * Get locations, captcha and form random generate token form signUp page
+     * @return array
+     * */
+    public function getSignUpData(): array
+    {
+        try {
+            $response['tokens'] = $this->authService->getCaptcha();
+            $response['locations'] = $this->frontendService->getLocations();
+        } catch (ServiceException $e) {
+            throw match ($e->getCode()) {
+                AbstractService::ERROR_UNABLE_TO_CREATE,
+                AbstractService::ERROR_UNABLE_TO_STORE,
+                => new Http422Exception($e->getMessage(), $e->getCode(), $e),
+                default => new Http500Exception('Internal Server Error', $e->getCode(), $e),
+            };
+        }
+
+        return $response;
+    }
 
 }

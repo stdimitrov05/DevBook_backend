@@ -72,6 +72,46 @@ class SignupValidation extends Validation
             ]
         );
 
+        $this->rules(
+            'csrf',
+            [
+                new PresenceOf([
+                    'message' => 'Csrf is required.',
+                    'cancelOnFail' => true
+                ]),
+                new Validation\Validator\Callback([
+                        'callback' => function ($data) {
+                            return $this->authService->verifyCsrfAndCaptcha($data['csrf']);
+                        },
+                        'message' => 'Invalid csrf token'
+                    ]
+                )
+            ]
+        );
+
+        $this->rules(
+            'captcha',
+            [
+                new PresenceOf([
+                    'message' => 'Captcha is required.',
+                    'cancelOnFail' => true
+                ]),
+                new StringLength([
+                    'min' => 4,
+                    'messageMinimum' => 'Captcha must be at least 4 characters.',
+                    'max' => 4,
+                    'messageMaximum' => 'Captcha must be at most 4 characters.',
+                    'cancelOnFail' => true
+                ]),
+                new Validation\Validator\Callback([
+                        'callback' => function ($data) {
+                            return $this->authService->verifyCsrfAndCaptcha($data['csrf'], $data['captcha']);
+                        },
+                        'message' => 'Invalid captcha '
+                    ]
+                )
+            ]
+        );
 
     }
 

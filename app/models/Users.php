@@ -15,56 +15,63 @@ class Users extends \Phalcon\Mvc\Model
      * @Identity
      * @Column(type="integer", length=32, nullable=false)
      */
-    public $id;
+    public ?int $id = null;
 
     /**
      *
      * @var string
      * @Column(type="string", length=20, nullable=false)
      */
-    public $username;
+    public string $ip_address ;
+
+    /**
+     *
+     * @var string
+     * @Column(type="string", length=20, nullable=false)
+     */
+    public string $username;
 
     /**
      *
      * @var string
      * @Column(type="string", length=255, nullable=false)
      */
-    public $email;
+    public string $email;
 
     /**
      *
      * @var string
      * @Column(type="string", length=255, nullable=false)
      */
-    public $password;
+    public string $password;
 
     /**
      *
-     * @var integer
-     * @Column(type="integer")
+     * @var float
+     * @Column(type="float")
      */
-    public $balance;
+    public ?float $balance = 0.00;
 
     /**
      *
      * @var integer 0 or 1
      * @Column(type="integer", length=1, nullable=false)
      */
-    public $active;
+    public ?int $active = 0;
 
     /**
      *
      * @var integer
      * @Column(type="integer", length=11, nullable=false)
      */
-    public $created_at;
+    public ?int $created_at = null;
 
     /**
      *
      * @var integer
      * @Column(type="integer", length=11, nullable=true)
      */
-    public $deleted_at;
+    public ?int $deleted_at = null;
 
     /**
      * Initialize method for model.
