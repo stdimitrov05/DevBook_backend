@@ -5,14 +5,10 @@ namespace App\Services;
 use App\Exceptions\HttpExceptions\Http403Exception;
 use App\Exceptions\ServiceException;
 use App\Lib\Helper;
-use App\Models\Avatars;
-use App\Models\EmailConfirmations;
-use App\Models\UserBillings;
 use App\Models\Users;
 use Intervention\Image\ImageManager;
 
 /**
- * Business-logic for site frontend
  *
  * @UsersService
  * @\App\Services\UsersService
@@ -21,8 +17,10 @@ use Intervention\Image\ImageManager;
 class UsersService extends AbstractService
 {
     /**
-     * @param array $data
-     * @return array
+     * Creates a new user with the provided data and returns an array with the new user's ID.
+     * @param array $data An array containing the data for the new user.
+     * @return array An array containing the new user's ID.
+     * @throws ServiceException If the new user could not be created.
      */
     public function create(array $data): array
     {
@@ -44,7 +42,6 @@ class UsersService extends AbstractService
         return [
             "userId" => $user->id
         ];
-
     }
 
 }

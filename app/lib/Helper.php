@@ -5,11 +5,10 @@ namespace App\Lib;
 class Helper
 {
     /**
-     * Generate captcha code
-     * @param int $length
-     * @return string
+     * Generates a random string of characters to use as a key.
      *
-     * @throws \Exception
+     * @param int $length The length of the key to generate. Default value is 4.
+     * @return string A string containing the random key.
      */
     public static function randomKeys( int $length = 4): string
     {
@@ -24,10 +23,9 @@ class Helper
     }
 
     /**
-     * Form ip address convert to varbinary
-     * @param string $ipAddress
-     * @return  string
-     * @example "10.23.23.3" => 0x52a56419
+     * Converts an IP address string to its varbinary representation.
+     * @param string $ipAddress The IP address to convert.
+     * @return string A varbinary string representation of the IP address.
      */
     public static function hashIpAddressToVarbinary(string $ipAddress): string
     {

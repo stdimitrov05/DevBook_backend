@@ -22,10 +22,9 @@ use Phalcon\Encryption\Security\JWT\Exceptions\ValidatorException;
 class AuthService extends AbstractService
 {
     /**
-     * Get locations, captcha and form random generate token form signUp page
-     * @return array
+     * Generates a new captcha and form keys and stores them in Redis.
+     * @return array An array containing the generated CSRF token and captcha image.
      * @throws Exception
-     * @throws \RedisException
      * @throws \Exception
      */
     public function getCaptcha(): array
@@ -46,10 +45,11 @@ class AuthService extends AbstractService
     }
 
     /**
-     * Check form and captcha code in redis
-     * @param string $csrf
-     * @param ?string $captcha
-     * @return bool
+     * Verifies the given CSRF token and captcha code against the values stored in Redis.
+     *
+     * @param string $csrf The CSRF token to verify.
+     * @param string|null $captcha The captcha code to verify. Can be null if captcha is not required.
+     * @return bool Returns true if both the CSRF token and captcha code are valid, false otherwise.
      * @throws \RedisException
      */
     public function verifyCsrfAndCaptcha(string $csrf, ?string $captcha = null): bool
