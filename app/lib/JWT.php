@@ -14,28 +14,31 @@ use Phalcon\Encryption\Security\JWT\Validator;
 
 class JWT extends AbstractService
 {
-   private const ALGO = "sha512";
+    private const ALGO = "sha512";
+
     /**
-     * generateTokens
-     * Generate access and refresh jwt tokens
-     * @param int $userId
-     * @param int $remember
-     * @return array
-     * @throws ValidatorException
+     * Generates JWT access and refresh tokens for a given user ID.
+     * @param int $userId The ID of the user for whom the tokens are being generated.
+     * @param int $remember Flag indicating whether the user has clicked on "remember me" option. Defaults to 0.
+     * @return array An array containing the generated access token, refresh token, and their respective expiration times.
+     * @throws ServiceException If either the access token or the refresh token cannot be created.
      * @throws \RedisException
-     * @retrun  array
+     * @throws ValidatorException
      */
     public function generateTokens(int $userId, int $remember = 0): array
     {
-        // Generate jti
+        // Generate unique jti (JWT ID) using openssl_random_pseudo_bytes function and base64 encode it
         $jti = base64_encode(openssl_random_pseudo_bytes(32));
-        // Defaults to 'sha512'
+        // Create a new instance of the Hmac signer class using the configured algorithm (default is 'sha512')
         $signer = new Hmac(self::ALGO);
+        // Set the issued at time (iat) to the current Unix timestamp
         $iat = time();
+        // Get the issuer (iss) from the configured domain in the application settings
         $iss = $this->config->application->domain;
+        // Set the expiration time (exp) to the current Unix timestamp plus the configured access token expiry time
         $exp = $iat + $this->config->auth->accessTokenExpire;
 
-        // Create accessToken with expire 2 minutes
+        // Create an access token with the specified properties
         $accessToken = (new Builder($signer))
             ->setExpirationTime($exp)
             ->setPassphrase($this->config->auth->key)
@@ -48,13 +51,12 @@ class JWT extends AbstractService
             // Get token string
             ->getToken();
 
-        // Longer expiration time if user click remember me
-        // Set refresh token life :  1 week or 30 days
+        // Determine the refresh token expiry time based on whether the "remember me" option was selected
         $refreshExpire = $remember == 1
             ? $this->config->auth->refreshTokenRememberExpire
             : $this->config->auth->refreshTokenExpire;
 
-        // Create refreshToken
+        // Create a refresh token with the specified properties
         $refreshToken = (new Builder($signer))
             ->setExpirationTime($iat + $refreshExpire)
             ->setPassphrase($this->config->auth->key)
@@ -68,7 +70,7 @@ class JWT extends AbstractService
             // Get token string
             ->getToken();
 
-        // If accessToken or refreshToken has not created
+        // If the refresh or access token could not be created, throw a ServiceException with an appropriate
         if (!$accessToken || !$refreshToken) {
             throw  new ServiceException(
                 'Unable to create JWT tokens',
@@ -76,7 +78,7 @@ class JWT extends AbstractService
             );
         }
 
-        // Store JWT refresh token jti in redis
+        // Store the JWT refresh token jti in Redis with the user ID as the key and the configured refresh token expiry time as the TTL
         $this->redisService->storeJti($userId, $jti, $refreshExpire);
 
         return [
@@ -87,17 +89,19 @@ class JWT extends AbstractService
     }
 
     /**
-     * Decode JWT tokens
-     * @params string $token
-     * @return \Phalcon\Encryption\Security\JWT\Token\Token
+     * Decodes a JWT token string and returns its object representation.
+     * @param string $token The token string to decode.
+     * @return object The decoded token object.
+     * @throws ServiceException If the token is invalid or cannot be parsed.
      */
     public function decode(string $token): object
     {
         try {
+            // Parse the given JWT token using the Parser class and return the result.
             $parser = new Parser();
             return $parser->parse($token);
-
         } catch (\InvalidArgumentException $exception) {
+           // If the token is invalid or malformed, throw a ServiceException with an appropriate error message.
             throw new ServiceException(
                 'Bad token',
                 self::ERROR_BAD_TOKEN
@@ -106,13 +110,13 @@ class JWT extends AbstractService
     }
 
     /**
-     * Validate JWT token
-     * @param Token $token
+     *Validates a JWT token object and throws an exception if it is invalid.
+     * @param Token $token The token object to validate.
+     * @throws ServiceException If the token is invalid or cannot be parsed.
      * @throws ValidatorException
      */
-    public function validateJwt(Token $token) : void
+    public function validateJwt(Token $token): void
     {
-
         $validator = new Validator($token);
         $signer = new Hmac(self::ALGO);;
 
@@ -128,12 +132,11 @@ class JWT extends AbstractService
                 self::ERROR_BAD_TOKEN
             );
         }
-
     }
 
     /**
-     * Get authorization header
-     * @return false|string
+     * Extracts the authorization token from the request header.
+     * @return string|bool The authorization token string if found, otherwise false.
      */
     public function getAuthorizationToken(): bool|string
     {
@@ -146,7 +149,6 @@ class JWT extends AbstractService
             return false;
         }
     }
-
 
 
 }

@@ -11,23 +11,35 @@ class Captcha
     private ?string $font = null;
     private ?string $fontsFolder = null;
 
-    public function __construct($width = '90', $height = '30')
+    /**
+     *Initializes a new instance of the Captcha class with the specified width and height.
+     * @param string $width The width of the captcha image in pixels.
+     * @param string $height The height of the captcha image in pixels.
+     * @throws \Exception If an error occurs while setting the captcha code, fonts folder or font.
+     */
+    public function __construct(string $width = '90', string $height = '30')
     {
+        // Set the width and height properties
         $this->width = $width;
         $this->height = $height;
 
         try {
+            // Set a random code for the captcha
             $this->setCode(mt_rand(1000, 9999));
+            // Set the fonts folder
             $this->setFontsFolder(__DIR__ . '/fonts');
+            // Set the font to be used for the captcha
             $this->setFont('monofont');
         } catch (\Exception $e) {
         }
     }
 
     /**
-     * @throws \Exception
+     * Generate a captcha image with random background dots and lines, and a random string of characters.
+     * @return string a base64-encoded jpeg image string.
+     * @throws \Exception if no font file is set.
      */
-    public function load()
+    public function load(): string
     {
         if (empty($this->font)) {
             throw new \Exception('No font file set', 500);
@@ -63,9 +75,11 @@ class Captcha
     }
 
     /**
-     * @throws \Exception
+     *  Sets the captcha code.
+     * @param ?string $code The captcha code to set.
+     * @throws \Exception If no captcha code is provided.
      */
-    public function setCode($code = null): void
+    public function setCode(?string $code = null): void
     {
         if (empty($code)) {
             throw new \Exception('No captcha code provided', 500);
@@ -74,15 +88,22 @@ class Captcha
         }
     }
 
+    /**
+     * Gets the captcha code.
+     * @return string|null The captcha code, or null if it hasn't been set.
+     */
     public function getCode(): ?string
     {
         return $this->code;
     }
 
     /**
-     * @throws \Exception
+     * Sets the path to the fonts folder used for generating the captcha image.
+     *
+     * @param ?string $folder The path to the fonts folder.
+     * @throws \Exception If the fonts folder is not provided or is not readable.
      */
-    public function setFontsFolder($folder = null): void
+    public function setFontsFolder(?string $folder = null): void
     {
         if (empty($folder)) {
             throw new \Exception('Fonts folder not provided', 500);
@@ -96,15 +117,23 @@ class Captcha
         }
     }
 
+    /**
+     * Retrieves the path to the fonts folder used for generating the captcha image.
+     * @return ?string The path to the fonts folder.
+     */
     public function getFontsFolder(): ?string
     {
         return $this->fontsFolder;
     }
 
     /**
-     * @throws \Exception
+     *
+     * Set the font file to be used for generating the captcha image
+     * @param ?string $font The name of the font file, without the .ttf extension
+     * @return void
+     * @throws \Exception If the fonts folder is not set or the specified font file cannot be loaded
      */
-    public function setFont($font = null): void
+    public function setFont(?string $font = null): void
     {
         if (empty($this->fontsFolder)) {
             throw new \Exception('Fonts folder not set', 500);
@@ -118,6 +147,10 @@ class Captcha
         }
     }
 
+    /**
+     * Get the font file currently set for generating the captcha image
+     * @return ?string The path to the font file, or null if not set
+     */
     public function getFont(): ?string
     {
         return $this->font;

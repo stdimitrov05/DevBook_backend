@@ -22,19 +22,18 @@ class AuthController extends AbstractController
 {
 
     /**
-     * Signup Action
-     * @retrun  null
+     * Creates a new user account using the provided request data.
+     * @return array An array containing the newly created user's information.
+     * @throws Http422Exception If the provided request data fails validation.
+     * @throws Http500Exception If an error occurs while creating the user account.
      */
-
     public function signup(): array
     {
         $data = [];
-
         // Collect and trim request params
         foreach ($this->request->getPost() as $key => $value) {
             $data[$key] = $this->request->getPost($key, ['string', 'trim']);
         }
-
         // Start validation
         $validation = new SignupValidation();
         $messages = $validation->validate($data);
@@ -60,9 +59,12 @@ class AuthController extends AbstractController
     }
 
     /**
-     * Get locations, captcha and form random generate token form signUp page
-     * @return array
-     * */
+     * Retrieves the sign-up data required by the front-end form, including the tokens for the captcha and the list of available locations.
+     *
+     * @return array An array containing the captcha tokens and locations.
+     * @throws Http422Exception If the service is unable to create or store data.
+     * @throws Http500Exception If an internal server error occurs.
+     */
     public function getSignUpData(): array
     {
         try {
